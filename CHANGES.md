@@ -13,3 +13,5 @@
 - Fixed JSON parsing by importing Tornado's `escape` module explicitly.
 - Made request URL/body encoding work on both Python 2 and Python 3 runtimes.
 - Added runtime dependency metadata for Tornado and lxml.
+- Added canonical `docs/plans` coverage and a docs-plan checker under
+  `make check`.

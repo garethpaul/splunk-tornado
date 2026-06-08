@@ -12,6 +12,12 @@ This README is based on the checked-in source, manifests, scripts, and repositor
 ## Repository Contents
 
 - `README`
+- `CHANGES.md` - maintenance history for auth compatibility checks
+- `Makefile` - local verification entry points
+- `docs/plans` - completed maintenance plans for the current baseline
+- `plans` - historical implementation notes
+- `requirements.txt` - runtime dependency notes
+- `scripts` - documentation-plan validators
 - `SECURITY.md` - security reporting and disclosure guidance
 - `setup.py` - Python dependency or packaging metadata
 - `splunktornado` - source or example code
@@ -22,7 +28,7 @@ Additional scan context:
 - Source directories: splunktornado
 - Dependency and build manifests: setup.py
 - Entry points or build surfaces: none detected
-- Test-looking files: splunktornado/test/__init__.py, splunktornado/test/noauth.py
+- Test-looking files: tests/test_auth.py, splunktornado/test/__init__.py, splunktornado/test/noauth.py
 
 ## Getting Started
 
@@ -50,6 +56,7 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 - `make check` runs Python syntax checks, unit tests, and `setup.py check`.
 - The tests mock response objects and Tornado HTTP clients; they do not require
   a live Splunk instance.
+- `make check` also requires completed canonical plans under `docs/plans`.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -67,6 +74,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
+- See `docs/plans/2026-06-08-splunk-tornado-baseline.md` for the canonical
+  auth and request compatibility baseline.
 
 ## Contributing
 
