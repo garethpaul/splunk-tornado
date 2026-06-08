@@ -56,6 +56,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 - `make check` runs Python syntax checks, unit tests, and `setup.py check`.
 - The tests mock response objects and Tornado HTTP clients; they do not require
   a live Splunk instance.
+- Auth retry tests verify that unauthorized requests retry at most once after a
+  session-key refresh.
 - `make check` also requires completed canonical plans under `docs/plans`.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
@@ -76,6 +78,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `VISION.md` for project direction and contribution guardrails.
 - See `docs/plans/2026-06-08-splunk-tornado-baseline.md` for the canonical
   auth and request compatibility baseline.
+- See `docs/plans/2026-06-08-bounded-auth-retry.md` for the bounded
+  unauthorized retry guard.
 
 ## Contributing
 

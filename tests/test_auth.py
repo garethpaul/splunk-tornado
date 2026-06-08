@@ -12,6 +12,9 @@ from splunktornado.auth import SplunkMixin
 class DummyHandler(SplunkMixin):
     settings = {"splunk_host_path": "https://splunk.example:8089"}
 
+    def __init__(self):
+        self.application = type("Application", (), {})()
+
     def require_setting(self, name, feature):
         if name not in self.settings:
             raise RuntimeError("%s missing for %s" % (name, feature))
@@ -24,8 +27,14 @@ class Response(object):
         self.error = error
 
 
+class FakeHTTPError(object):
+    def __init__(self, code):
+        self.code = code
+
+
 class FakeHTTPClient(object):
     instances = []
+    response = Response("text/plain", b"ok")
 
     def __init__(self):
         self.calls = []
@@ -34,7 +43,7 @@ class FakeHTTPClient(object):
 
     def fetch(self, url, **kwargs):
         self.calls.append((url, kwargs))
-        return Response("text/plain", b"ok")
+        return self.response
 
     def close(self):
         self.closed = True
@@ -73,6 +82,7 @@ class SplunkMixinTests(unittest.TestCase):
         handler = DummyHandler()
         original_client = tornado.httpclient.HTTPClient
         FakeHTTPClient.instances = []
+        FakeHTTPClient.response = Response("text/plain", b"ok")
         tornado.httpclient.HTTPClient = FakeHTTPClient
         try:
             response, xml, payload, text = handler.sync_request(
@@ -82,6 +92,7 @@ class SplunkMixinTests(unittest.TestCase):
             )
         finally:
             tornado.httpclient.HTTPClient = original_client
+            FakeHTTPClient.response = Response("text/plain", b"ok")
 
         self.assertIsNone(response.error)
         self.assertIsNone(xml)
@@ -97,6 +108,81 @@ class SplunkMixinTests(unittest.TestCase):
         self.assertEqual("POST", kwargs["method"])
         self.assertEqual("search=index%3Dmain", kwargs["body"])
         self.assertEqual({"Authorization": "Splunk abc123"}, kwargs["headers"])
+
+    def test_sync_request_retries_unauthorized_once(self):
+        handler = DummyHandler()
+        handler.session_key = "stale"
+        refreshes = []
+
+        def refresh_session_key():
+            refreshes.append(True)
+            handler.session_key = "fresh"
+
+        handler.refresh_session_key = refresh_session_key
+
+        original_client = tornado.httpclient.HTTPClient
+        FakeHTTPClient.instances = []
+        FakeHTTPClient.response = Response("text/plain", b"unauthorized", error=FakeHTTPError(401))
+        tornado.httpclient.HTTPClient = FakeHTTPClient
+        try:
+            response, xml, payload, text = handler.sync_request(
+                "/services/search/jobs",
+                session_key=handler.session_key,
+            )
+        finally:
+            tornado.httpclient.HTTPClient = original_client
+            FakeHTTPClient.response = Response("text/plain", b"ok")
+
+        self.assertEqual(401, response.error.code)
+        self.assertIsNone(xml)
+        self.assertIsNone(payload)
+        self.assertEqual(b"unauthorized", text)
+        self.assertEqual([True], refreshes)
+        self.assertEqual(2, len(FakeHTTPClient.instances))
+        self.assertEqual(
+            {"Authorization": "Splunk stale"},
+            FakeHTTPClient.instances[0].calls[0][1]["headers"],
+        )
+        self.assertEqual(
+            {"Authorization": "Splunk fresh"},
+            FakeHTTPClient.instances[1].calls[0][1]["headers"],
+        )
+
+    def test_async_request_retries_unauthorized_once(self):
+        handler = DummyHandler()
+        handler.session_key = "fresh"
+        handler.request = type("Request", (), {
+            "connection": type("Connection", (), {
+                "stream": type("Stream", (), {"closed": lambda self: False})()
+            })()
+        })()
+        async_calls = []
+        refreshes = []
+
+        def async_request(*args, **kwargs):
+            async_calls.append((args, kwargs))
+
+        handler.async_request = async_request
+        handler.refresh_session_key = lambda: refreshes.append(True)
+        callback_calls = []
+
+        handler._on_async_response(
+            "/services/search/jobs",
+            lambda response, **kwargs: callback_calls.append((response, kwargs)),
+            Response("text/plain", b"unauthorized", error=FakeHTTPError(401)),
+            request_timeout=9.0,
+            search="index=main",
+        )
+
+        self.assertEqual([], callback_calls)
+        self.assertEqual([True], refreshes)
+        self.assertEqual(1, len(async_calls))
+        args, kwargs = async_calls[0]
+        self.assertEqual("/services/search/jobs", args[0])
+        self.assertEqual("fresh", kwargs["session_key"])
+        self.assertEqual(9.0, kwargs["request_timeout"])
+        self.assertEqual(False, kwargs["retry_on_unauthorized"])
+        self.assertEqual("index=main", kwargs["search"])
 
 
 if __name__ == "__main__":

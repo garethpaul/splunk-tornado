@@ -48,14 +48,17 @@ class SplunkMixin(object):
     
     def request_session_key(self):
         """Retrieve a session key from the splunk authentication endpoint as a syncronous request."""
-        self.retry_splunk_request = False
         self.require_setting("splunk_username", "Splunk Connect")
         self.require_setting("splunk_password", "Splunk Connect")
         post_args = {
           "username": self.settings["splunk_username"],
           "password": self.settings["splunk_password"],
         }
-        response, xml, json, text = self.sync_request("/services/auth/login", post_args=post_args)
+        response, xml, json, text = self.sync_request(
+            "/services/auth/login",
+            post_args=post_args,
+            retry_on_unauthorized=False,
+        )
         if response.error is None and xml is not None:
             logging.info("Successfully retrieved Splunk session_key")
             return xml.findtext("sessionKey")
@@ -63,7 +66,7 @@ class SplunkMixin(object):
             logging.info("Could not retrieve Splunk session_key")
             return None
     
-    def sync_request(self, pathname, post_args=None, session_key=None, **kwargs):
+    def sync_request(self, pathname, post_args=None, session_key=None, retry_on_unauthorized=True, **kwargs):
         """"
         A simplified syncronous http request method for splunk services.
         Returns a tuple based on parse_response method spec.
@@ -79,37 +82,43 @@ class SplunkMixin(object):
         finally:
             http.close()
         if response.error:
-            if response.error.code==401 and self.retry_request:
+            if response.error.code==401 and self.retry_request and retry_on_unauthorized:
                 self.refresh_session_key()
-                return self.sync_request(pathname, post_args=post_args, session_key=self.session_key, **kwargs)
+                return self.sync_request(
+                    pathname,
+                    post_args=post_args,
+                    session_key=self.session_key,
+                    retry_on_unauthorized=False,
+                    **kwargs
+                )
         xml, json, text = self.parse_response(response)
         return response, xml, json, text
  
-    def async_request(self, pathname, callback, post_args=None, session_key=None, streaming_callback=None, request_timeout=20.0, **kwargs):
+    def async_request(self, pathname, callback, post_args=None, session_key=None, streaming_callback=None, request_timeout=20.0, retry_on_unauthorized=True, **kwargs):
         """
         A simplified non-blocking asynchronous http request method for splunk services. 
         The callback is called with a response, and xml, json, and text keyword args where xml, json, and text are not passed if not serializable from response/content-type.
         """
         url = self.request_url(pathname, **kwargs)
         headers = self.request_headers(session_key=session_key)
-        callback=self.async_callback(self._on_async_response, pathname, callback, post_args=post_args, session_key=session_key, streaming_callback=streaming_callback, request_timeout=request_timeout, **kwargs)
+        callback=self.async_callback(self._on_async_response, pathname, callback, post_args=post_args, session_key=session_key, streaming_callback=streaming_callback, request_timeout=request_timeout, retry_on_unauthorized=retry_on_unauthorized, **kwargs)
         http = tornado.httpclient.AsyncHTTPClient()
         if post_args is not None:
             http.fetch(url, method="POST", body=urlencode(post_args), callback=callback, headers=headers, streaming_callback=streaming_callback, request_timeout=request_timeout, raise_error=False)
         else:
             http.fetch(url, callback=callback, headers=headers, streaming_callback=streaming_callback, request_timeout=request_timeout, raise_error=False)
 
-    def _on_async_response(self, pathname, callback, response, post_args=None, session_key=None, streaming_callback=None, request_timeout=20.0, **kwargs):
+    def _on_async_response(self, pathname, callback, response, post_args=None, session_key=None, streaming_callback=None, request_timeout=20.0, retry_on_unauthorized=True, **kwargs):
         """Reponse handler for asynchronous requests."""
         if self.request.connection.stream.closed():
             return
         else:
             if response.error:
-                if response.error.code==401 and self.retry_request:
+                if response.error.code==401 and self.retry_request and retry_on_unauthorized:
                     self.refresh_session_key()
                     if self.session_key:
                         logging.info("Retry request with fresh session key")
-                        self.async_request(pathname, callback, post_args=post_args, session_key=self.session_key, streaming_callback=streaming_callback, request_timeout=request_timeout, **kwargs)
+                        self.async_request(pathname, callback, post_args=post_args, session_key=self.session_key, streaming_callback=streaming_callback, request_timeout=request_timeout, retry_on_unauthorized=False, **kwargs)
                         return
                     else:
                         callback(response)

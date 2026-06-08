@@ -2,6 +2,8 @@
 
 ## 2026-06-08
 
+- Bounded unauthorized Splunk request retries to one session-key refresh and
+  added mocked sync/async coverage.
 - Added `make check` as the shared repository verification alias.
 - Made Tornado sync and async Splunk requests pass `raise_error=False` so 401
   responses reach the session refresh/retry path.

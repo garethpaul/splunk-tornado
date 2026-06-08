@@ -17,6 +17,7 @@ Priority:
 - Preserve the `SplunkMixin` request and session-key flow
 - Keep Splunk username, password, and host path in application settings
 - Avoid logging credentials or session keys
+- Keep unauthorized request retries bounded per request
 - Keep completed maintenance plans under `docs/plans`
 - Treat Python 2 and older Tornado APIs as legacy constraints
 
