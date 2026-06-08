@@ -39,7 +39,7 @@ Splunk services can expose operational logs and sensitive data. This mixin
 should keep credentials local to settings, avoid session-key leakage, and make
 all upstream request paths explicit.
 
-## What We Will Not Merge For Now
+## What We Will Not Merge (For Now)
 
 - Credential or session-key logging
 - Unbounded retries
