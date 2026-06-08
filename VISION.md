@@ -35,6 +35,11 @@ Contribution rules:
 
 ## Security And Responsible Use
 
+Canonical security policy and reporting:
+
+- [`SECURITY.md`](SECURITY.md)
+
+
 Splunk services can expose operational logs and sensitive data. This mixin
 should keep credentials local to settings, avoid session-key leakage, and make
 all upstream request paths explicit.
