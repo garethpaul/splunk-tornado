@@ -1,4 +1,4 @@
-.PHONY: lint test build verify
+.PHONY: build check lint test verify
 
 PYTHON ?= python3
 
@@ -12,3 +12,5 @@ build: lint
 	$(PYTHON) setup.py check
 
 verify: lint test build
+
+check: verify

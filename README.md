@@ -47,7 +47,7 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 
 ## Testing and Verification
 
-- `make verify` runs Python syntax checks, unit tests, and `setup.py check`.
+- `make check` runs Python syntax checks, unit tests, and `setup.py check`.
 - The tests mock response objects and Tornado HTTP clients; they do not require
   a live Splunk instance.
 

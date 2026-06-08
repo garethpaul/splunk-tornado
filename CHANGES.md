@@ -2,6 +2,7 @@
 
 ## 2026-06-08
 
+- Added `make check` as the shared repository verification alias.
 - Made Tornado sync and async Splunk requests pass `raise_error=False` so 401
   responses reach the session refresh/retry path.
 - Closed synchronous Tornado HTTP clients after each request and added mocked
