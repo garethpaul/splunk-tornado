@@ -1,9 +1,14 @@
 #!/usr/bin/env python
 
-import urllib
 import tornado.httpclient
+from tornado import escape
 import logging
 import lxml.etree as et
+
+try:
+    from urllib import urlencode
+except ImportError:
+    from urllib.parse import urlencode
 
 class SplunkMixin(object):
     """General splunk services connection mixin with shared authentication and lazy session key updating if stale/non-existant."""
@@ -31,7 +36,7 @@ class SplunkMixin(object):
         self.require_setting("splunk_host_path", "Splunk Connect")
         url = "%s%s" % (self.settings["splunk_host_path"], pathname)
         if kwargs:
-            url += "?" + urllib.urlencode(kwargs)
+            url += "?" + urlencode(kwargs)
         return url
 
     def request_headers(self, session_key=None):
@@ -67,7 +72,7 @@ class SplunkMixin(object):
         headers = self.request_headers(session_key=session_key)
         http = tornado.httpclient.HTTPClient()
         if post_args is not None:
-            response = http.fetch(url, method="POST", body=urllib.urlencode(post_args), headers=headers)
+            response = http.fetch(url, method="POST", body=urlencode(post_args), headers=headers)
         else:
             response = http.fetch(url, headers=headers)
         if response.error:
@@ -87,7 +92,7 @@ class SplunkMixin(object):
         callback=self.async_callback(self._on_async_response, pathname, callback, post_args=post_args, session_key=session_key, streaming_callback=streaming_callback, request_timeout=request_timeout, **kwargs)
         http = tornado.httpclient.AsyncHTTPClient()
         if post_args is not None:
-            http.fetch(url, method="POST", body=urllib.urlencode(post_args), callback=callback, headers=headers, streaming_callback=streaming_callback, request_timeout=request_timeout)
+            http.fetch(url, method="POST", body=urlencode(post_args), callback=callback, headers=headers, streaming_callback=streaming_callback, request_timeout=request_timeout)
         else:
             http.fetch(url, callback=callback, headers=headers, streaming_callback=streaming_callback, request_timeout=request_timeout)
 

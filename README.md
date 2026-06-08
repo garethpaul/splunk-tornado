@@ -29,14 +29,14 @@ Additional scan context:
 ### Prerequisites
 
 - Git
-- Python matching the era of the project
+- Python 3 for local verification
 
 ### Setup
 
 ```bash
 git clone https://github.com/garethpaul/splunk-tornado.git
 cd splunk-tornado
-python setup.py install
+python3 -m pip install -r requirements.txt
 ```
 
 The setup commands above are derived from repository files. Legacy mobile, Python, or JavaScript samples may require older SDKs or package versions than a modern workstation uses by default.
@@ -47,7 +47,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 
 ## Testing and Verification
 
-- `python -m pytest` or the test runner used by the files above
+- `make verify` runs Python syntax checks, unit tests, and `setup.py check`.
+- The tests mock response objects and do not require a live Splunk instance.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
