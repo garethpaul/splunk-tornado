@@ -1,5 +1,8 @@
 # splunk-tornado
 
+<!-- README-OVERVIEW-IMAGE -->
+![Project overview](docs/readme-overview.svg)
+
 ## Overview
 
 `garethpaul/splunk-tornado` is a Python web API or service project. Splunk Tornado Authentication
@@ -72,4 +75,3 @@ Keep changes small and tied to the project that is already present in this repos
 The repository also contains `README`. Its existing project summary is:
 
 > Implementation of Splunk authentication scheme for Tornado ======= See http://www.tornadoweb.org/ and http://www.splunk.com
-
