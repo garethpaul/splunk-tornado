@@ -71,10 +71,13 @@ class SplunkMixin(object):
         url = self.request_url(pathname, **kwargs)
         headers = self.request_headers(session_key=session_key)
         http = tornado.httpclient.HTTPClient()
-        if post_args is not None:
-            response = http.fetch(url, method="POST", body=urlencode(post_args), headers=headers)
-        else:
-            response = http.fetch(url, headers=headers)
+        try:
+            fetch_kwargs = {"headers": headers, "raise_error": False}
+            if post_args is not None:
+                fetch_kwargs.update({"method": "POST", "body": urlencode(post_args)})
+            response = http.fetch(url, **fetch_kwargs)
+        finally:
+            http.close()
         if response.error:
             if response.error.code==401 and self.retry_request:
                 self.refresh_session_key()
@@ -92,9 +95,9 @@ class SplunkMixin(object):
         callback=self.async_callback(self._on_async_response, pathname, callback, post_args=post_args, session_key=session_key, streaming_callback=streaming_callback, request_timeout=request_timeout, **kwargs)
         http = tornado.httpclient.AsyncHTTPClient()
         if post_args is not None:
-            http.fetch(url, method="POST", body=urlencode(post_args), callback=callback, headers=headers, streaming_callback=streaming_callback, request_timeout=request_timeout)
+            http.fetch(url, method="POST", body=urlencode(post_args), callback=callback, headers=headers, streaming_callback=streaming_callback, request_timeout=request_timeout, raise_error=False)
         else:
-            http.fetch(url, callback=callback, headers=headers, streaming_callback=streaming_callback, request_timeout=request_timeout)
+            http.fetch(url, callback=callback, headers=headers, streaming_callback=streaming_callback, request_timeout=request_timeout, raise_error=False)
 
     def _on_async_response(self, pathname, callback, response, post_args=None, session_key=None, streaming_callback=None, request_timeout=20.0, **kwargs):
         """Reponse handler for asynchronous requests."""

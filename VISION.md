@@ -21,7 +21,7 @@ Priority:
 
 Next priorities:
 
-- Add tests with mocked Tornado HTTP clients and Splunk responses
+- Expand mocked Tornado HTTP client and Splunk response coverage
 - Import and validate JSON parsing dependencies explicitly
 - Return clearer errors for auth failures and retry paths
 - Document supported Tornado and Splunk API versions

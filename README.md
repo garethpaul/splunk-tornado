@@ -48,7 +48,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 ## Testing and Verification
 
 - `make verify` runs Python syntax checks, unit tests, and `setup.py check`.
-- The tests mock response objects and do not require a live Splunk instance.
+- The tests mock response objects and Tornado HTTP clients; they do not require
+  a live Splunk instance.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
