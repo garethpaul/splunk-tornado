@@ -139,14 +139,14 @@ class SplunkMixin(object):
         if content.find("text/xml")!=-1:
             try:
                 xml = et.fromstring(response.body, parser=self.xml_parser())
-            except:
+            except (et.XMLSyntaxError, ValueError):
                 logging.warning("Could not parse xml")
                 return None, None, None
             return xml, None, None
         elif content.find("application/json")!=-1:
             try:
                 json = escape.json_decode(response.body)
-            except:
+            except ValueError:
                 logging.warning("Could not decode json")
                 return None, None, None
             return None, json, None

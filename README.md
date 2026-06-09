@@ -64,6 +64,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   handing Splunk responses to `lxml`.
 - Response parsing normalizes `Content-Type` casing before choosing XML, JSON,
   or text decoding.
+- Parser error handling catches expected XML and JSON decode failures without
+  swallowing unrelated exceptions.
 - `make check` also requires completed canonical plans under `docs/plans`.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
@@ -92,6 +94,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   guard.
 - See `docs/plans/2026-06-09-content-type-normalization.md` for response
   content-type normalization coverage.
+- See `docs/plans/2026-06-09-narrow-parser-exceptions.md` for parser exception
+  handling coverage.
 
 ## Contributing
 

@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Narrowed XML and JSON parser exception handling and added regression coverage
+  for invalid parser payloads.
 - Normalized Splunk response `Content-Type` casing before parser dispatch and
   added regression coverage for mixed-case JSON headers with parameters.
 - Added a no-network, no-entity-resolution XML parser for Splunk XML responses.

@@ -21,6 +21,7 @@ Priority:
 - Avoid retrying upstream requests when session refresh fails
 - Parse XML responses without resolving external entities
 - Normalize response content types before parser dispatch
+- Keep parser exception handling narrow and observable
 - Keep completed maintenance plans under `docs/plans`
 - Treat Python 2 and older Tornado APIs as legacy constraints
 
@@ -53,6 +54,7 @@ all upstream request paths explicit.
 - Credential or session-key logging
 - Unbounded retries
 - XML parsing that can resolve external entities or use network access
+- Bare parser exception handlers that can hide unrelated failures
 - Hidden proxying to arbitrary Splunk paths
 - Live-service-only tests
 

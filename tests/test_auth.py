@@ -105,6 +105,24 @@ class SplunkMixinTests(unittest.TestCase):
         self.assertIsNone(payload)
         self.assertIsNone(text)
 
+    def test_parse_response_returns_empty_result_for_invalid_xml(self):
+        response = Response("text/xml", b"<response>")
+
+        xml, payload, text = SplunkMixin().parse_response(response)
+
+        self.assertIsNone(xml)
+        self.assertIsNone(payload)
+        self.assertIsNone(text)
+
+    def test_parse_response_returns_empty_result_for_invalid_json(self):
+        response = Response("application/json", b"{")
+
+        xml, payload, text = SplunkMixin().parse_response(response)
+
+        self.assertIsNone(xml)
+        self.assertIsNone(payload)
+        self.assertIsNone(text)
+
     def test_request_url_encodes_query_parameters(self):
         handler = DummyHandler()
 

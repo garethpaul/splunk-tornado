@@ -39,6 +39,12 @@ if "XMLParser(resolve_entities=False, no_network=True)" not in auth_source:
     failures.append("splunktornado/auth.py must create XMLParser with entity resolution disabled and no network access")
 if "et.fromstring(response.body)" in auth_source:
     failures.append("splunktornado/auth.py must not parse XML responses without the safe parser")
+if "except:" in auth_source:
+    failures.append("splunktornado/auth.py must not use bare parser exceptions")
+if "except (et.XMLSyntaxError, ValueError):" not in auth_source:
+    failures.append("splunktornado/auth.py must catch expected XML parser failures explicitly")
+if "except ValueError:" not in auth_source:
+    failures.append("splunktornado/auth.py must catch JSON decode failures explicitly")
 
 if failures:
     print("Documentation plan checks failed:\n- %s" % "\n- ".join(failures), file=sys.stderr)
