@@ -69,6 +69,24 @@ class SplunkMixinTests(unittest.TestCase):
         self.assertEqual({"ok": True}, payload)
         self.assertIsNone(text)
 
+    def test_parse_response_decodes_application_xml(self):
+        response = Response("Application/XML; charset=utf-8", b"<response />")
+
+        xml, payload, text = SplunkMixin().parse_response(response)
+
+        self.assertEqual("response", xml.tag)
+        self.assertIsNone(payload)
+        self.assertIsNone(text)
+
+    def test_parse_response_ignores_near_match_content_types(self):
+        response = Response("application/jsonp", b'{"ok": true}')
+
+        xml, payload, text = SplunkMixin().parse_response(response)
+
+        self.assertIsNone(xml)
+        self.assertIsNone(payload)
+        self.assertIsNone(text)
+
     def test_parse_response_passes_safe_xml_parser(self):
         response = Response("text/xml", b"<response />")
         calls = []

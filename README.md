@@ -66,6 +66,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   handing Splunk responses to `lxml`.
 - Response parsing normalizes `Content-Type` casing before choosing XML, JSON,
   or text decoding.
+- Response parsing strips `Content-Type` parameters and dispatches only on exact
+  media types, including `application/xml`.
 - Parser error handling catches expected XML and JSON decode failures without
   swallowing unrelated exceptions.
 - `make check` also requires completed canonical plans under `docs/plans`.
@@ -100,6 +102,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   handling coverage.
 - See `docs/plans/2026-06-09-session-key-header-guard.md` for the session-key
   Authorization header boundary.
+- See `docs/plans/2026-06-09-exact-content-type-dispatch.md` for exact media
+  type parser dispatch coverage.
 
 ## Contributing
 

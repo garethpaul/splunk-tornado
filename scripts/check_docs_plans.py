@@ -9,6 +9,7 @@ import sys
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DOCS_PLANS = os.path.join(ROOT, "docs", "plans")
 CANONICAL_PLAN = os.path.join(DOCS_PLANS, "2026-06-08-splunk-tornado-baseline.md")
+CONTENT_DISPATCH_PLAN = os.path.join(DOCS_PLANS, "2026-06-09-exact-content-type-dispatch.md")
 
 
 def rel(path):
@@ -24,6 +25,8 @@ failures = []
 
 if not os.path.isfile(CANONICAL_PLAN):
     failures.append("%s is missing" % rel(CANONICAL_PLAN))
+if not os.path.isfile(CONTENT_DISPATCH_PLAN):
+    failures.append("%s is missing" % rel(CONTENT_DISPATCH_PLAN))
 
 plans = sorted(glob.glob(os.path.join(DOCS_PLANS, "*.md")))
 if not plans:
@@ -49,6 +52,18 @@ if '"\\r" in session_key or "\\n" in session_key' not in auth_source:
     failures.append("splunktornado/auth.py must reject newline characters in session keys before building headers")
 if 'raise ValueError("session_key must not contain newline characters")' not in auth_source:
     failures.append("splunktornado/auth.py must fail closed on unsafe session keys")
+if "def response_content_type(self, response):" not in auth_source:
+    failures.append("splunktornado/auth.py must centralize response content-type normalization")
+if '.split(";", 1)[0].strip().lower()' not in auth_source:
+    failures.append("splunktornado/auth.py must strip content-type parameters before parser dispatch")
+if 'content.find("application/json")' in auth_source or 'content.find("text/xml")' in auth_source:
+    failures.append("splunktornado/auth.py must not dispatch parsers with content-type substring matches")
+if 'content in ("text/xml", "application/xml")' not in auth_source:
+    failures.append("splunktornado/auth.py must parse text/xml and application/xml responses")
+if 'content == "application/json"' not in auth_source:
+    failures.append("splunktornado/auth.py must dispatch JSON parsing by exact media type")
+if 'content == "text/plain"' not in auth_source:
+    failures.append("splunktornado/auth.py must dispatch text parsing by exact media type")
 
 if failures:
     print("Documentation plan checks failed:\n- %s" % "\n- ".join(failures), file=sys.stderr)

@@ -132,27 +132,30 @@ class SplunkMixin(object):
             xml, json, text = self.parse_response(response)
             callback(response, xml=xml, json=json, text=text)    
 
+    def response_content_type(self, response):
+        return response.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+
     def parse_response(self, response):
         """
         General splunk http response parser based on reponse content-type.
         Returns a tuple xml, json and text where xml, json and text are None type if not serializable from response/content-type.
         """
-        content = response.headers.get("Content-Type", "").lower()
-        if content.find("text/xml")!=-1:
+        content = self.response_content_type(response)
+        if content in ("text/xml", "application/xml"):
             try:
                 xml = et.fromstring(response.body, parser=self.xml_parser())
             except (et.XMLSyntaxError, ValueError):
                 logging.warning("Could not parse xml")
                 return None, None, None
             return xml, None, None
-        elif content.find("application/json")!=-1:
+        elif content == "application/json":
             try:
                 json = escape.json_decode(response.body)
             except ValueError:
                 logging.warning("Could not decode json")
                 return None, None, None
             return None, json, None
-        elif content.find("text/plain")!=-1:
+        elif content == "text/plain":
             return None, None, response.body
         else:
             return None, None, None

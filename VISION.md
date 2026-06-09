@@ -22,6 +22,7 @@ Priority:
 - Avoid retrying upstream requests when session refresh fails
 - Parse XML responses without resolving external entities
 - Normalize response content types before parser dispatch
+- Dispatch parsers by exact response media type, not substring matches
 - Keep parser exception handling narrow and observable
 - Keep completed maintenance plans under `docs/plans`
 - Treat Python 2 and older Tornado APIs as legacy constraints
@@ -29,7 +30,6 @@ Priority:
 Next priorities:
 
 - Expand mocked Tornado HTTP client and Splunk response coverage
-- Import and validate JSON parsing dependencies explicitly
 - Return clearer errors for auth failures and retry paths
 - Document supported Tornado and Splunk API versions
 

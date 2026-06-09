@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Switched response parser dispatch to exact normalized media types, including
+  `application/xml`, and added coverage for near-match content types.
 - Rejected CR/LF-bearing session keys before constructing Splunk Authorization
   headers, with mocked regression coverage.
 - Narrowed XML and JSON parser exception handling and added regression coverage
