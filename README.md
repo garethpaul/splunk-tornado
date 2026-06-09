@@ -58,6 +58,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   a live Splunk instance.
 - Auth retry tests verify that unauthorized requests retry at most once after a
   session-key refresh.
+- Sync and async retry paths do not issue a second upstream request when the
+  session refresh fails to produce a key.
 - `make check` also requires completed canonical plans under `docs/plans`.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
@@ -80,6 +82,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   auth and request compatibility baseline.
 - See `docs/plans/2026-06-08-bounded-auth-retry.md` for the bounded
   unauthorized retry guard.
+- See `docs/plans/2026-06-08-sync-refresh-failure.md` for the sync retry
+  refresh-failure guard.
 
 ## Contributing
 

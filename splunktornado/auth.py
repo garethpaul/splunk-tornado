@@ -84,13 +84,14 @@ class SplunkMixin(object):
         if response.error:
             if response.error.code==401 and self.retry_request and retry_on_unauthorized:
                 self.refresh_session_key()
-                return self.sync_request(
-                    pathname,
-                    post_args=post_args,
-                    session_key=self.session_key,
-                    retry_on_unauthorized=False,
-                    **kwargs
-                )
+                if self.session_key:
+                    return self.sync_request(
+                        pathname,
+                        post_args=post_args,
+                        session_key=self.session_key,
+                        retry_on_unauthorized=False,
+                        **kwargs
+                    )
         xml, json, text = self.parse_response(response)
         return response, xml, json, text
  

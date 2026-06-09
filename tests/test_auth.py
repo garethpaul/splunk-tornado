@@ -148,6 +148,41 @@ class SplunkMixinTests(unittest.TestCase):
             FakeHTTPClient.instances[1].calls[0][1]["headers"],
         )
 
+    def test_sync_request_does_not_retry_without_refreshed_session_key(self):
+        handler = DummyHandler()
+        handler.session_key = "stale"
+        refreshes = []
+
+        def refresh_session_key():
+            refreshes.append(True)
+            handler.session_key = None
+
+        handler.refresh_session_key = refresh_session_key
+
+        original_client = tornado.httpclient.HTTPClient
+        FakeHTTPClient.instances = []
+        FakeHTTPClient.response = Response("text/plain", b"unauthorized", error=FakeHTTPError(401))
+        tornado.httpclient.HTTPClient = FakeHTTPClient
+        try:
+            response, xml, payload, text = handler.sync_request(
+                "/services/search/jobs",
+                session_key=handler.session_key,
+            )
+        finally:
+            tornado.httpclient.HTTPClient = original_client
+            FakeHTTPClient.response = Response("text/plain", b"ok")
+
+        self.assertEqual(401, response.error.code)
+        self.assertIsNone(xml)
+        self.assertIsNone(payload)
+        self.assertEqual(b"unauthorized", text)
+        self.assertEqual([True], refreshes)
+        self.assertEqual(1, len(FakeHTTPClient.instances))
+        self.assertEqual(
+            {"Authorization": "Splunk stale"},
+            FakeHTTPClient.instances[0].calls[0][1]["headers"],
+        )
+
     def test_async_request_retries_unauthorized_once(self):
         handler = DummyHandler()
         handler.session_key = "fresh"

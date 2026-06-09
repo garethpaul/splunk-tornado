@@ -2,6 +2,8 @@
 
 ## 2026-06-08
 
+- Stopped sync requests from retrying 401 responses when session refresh fails
+  to produce a replacement key, with mocked coverage.
 - Bounded unauthorized Splunk request retries to one session-key refresh and
   added mocked sync/async coverage.
 - Added `make check` as the shared repository verification alias.
