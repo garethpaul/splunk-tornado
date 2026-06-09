@@ -60,6 +60,15 @@ class SplunkMixinTests(unittest.TestCase):
         self.assertEqual({"ok": True}, payload)
         self.assertIsNone(text)
 
+    def test_parse_response_normalizes_json_content_type(self):
+        response = Response("Application/JSON; charset=utf-8", b'{"ok": true}')
+
+        xml, payload, text = SplunkMixin().parse_response(response)
+
+        self.assertIsNone(xml)
+        self.assertEqual({"ok": True}, payload)
+        self.assertIsNone(text)
+
     def test_parse_response_passes_safe_xml_parser(self):
         response = Response("text/xml", b"<response />")
         calls = []

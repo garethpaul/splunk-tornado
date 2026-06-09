@@ -20,6 +20,7 @@ Priority:
 - Keep unauthorized request retries bounded per request
 - Avoid retrying upstream requests when session refresh fails
 - Parse XML responses without resolving external entities
+- Normalize response content types before parser dispatch
 - Keep completed maintenance plans under `docs/plans`
 - Treat Python 2 and older Tornado APIs as legacy constraints
 

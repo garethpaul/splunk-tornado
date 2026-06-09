@@ -62,6 +62,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   session refresh fails to produce a key.
 - XML response parsing disables entity resolution and network access before
   handing Splunk responses to `lxml`.
+- Response parsing normalizes `Content-Type` casing before choosing XML, JSON,
+  or text decoding.
 - `make check` also requires completed canonical plans under `docs/plans`.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
@@ -88,6 +90,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   refresh-failure guard.
 - See `docs/plans/2026-06-09-safe-xml-parser.md` for the XML parser hardening
   guard.
+- See `docs/plans/2026-06-09-content-type-normalization.md` for response
+  content-type normalization coverage.
 
 ## Contributing
 

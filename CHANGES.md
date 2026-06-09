@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Normalized Splunk response `Content-Type` casing before parser dispatch and
+  added regression coverage for mixed-case JSON headers with parameters.
 - Added a no-network, no-entity-resolution XML parser for Splunk XML responses.
 - Added mocked and entity-response coverage plus a static source guard for safe
   XML parsing under `make check`.

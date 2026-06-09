@@ -135,7 +135,7 @@ class SplunkMixin(object):
         General splunk http response parser based on reponse content-type.
         Returns a tuple xml, json and text where xml, json and text are None type if not serializable from response/content-type.
         """
-        content = response.headers.get("Content-Type", "")    
+        content = response.headers.get("Content-Type", "").lower()
         if content.find("text/xml")!=-1:
             try:
                 xml = et.fromstring(response.body, parser=self.xml_parser())
