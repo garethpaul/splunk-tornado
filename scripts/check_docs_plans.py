@@ -45,6 +45,10 @@ if "except (et.XMLSyntaxError, ValueError):" not in auth_source:
     failures.append("splunktornado/auth.py must catch expected XML parser failures explicitly")
 if "except ValueError:" not in auth_source:
     failures.append("splunktornado/auth.py must catch JSON decode failures explicitly")
+if '"\\r" in session_key or "\\n" in session_key' not in auth_source:
+    failures.append("splunktornado/auth.py must reject newline characters in session keys before building headers")
+if 'raise ValueError("session_key must not contain newline characters")' not in auth_source:
+    failures.append("splunktornado/auth.py must fail closed on unsafe session keys")
 
 if failures:
     print("Documentation plan checks failed:\n- %s" % "\n- ".join(failures), file=sys.stderr)

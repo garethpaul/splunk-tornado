@@ -43,6 +43,8 @@ class SplunkMixin(object):
         """The splunk request headers with the Authorization session key if provided."""
         headers = {}
         if session_key:
+            if "\r" in session_key or "\n" in session_key:
+                raise ValueError("session_key must not contain newline characters")
             headers["Authorization"] = "Splunk %s" % session_key
         return headers
     

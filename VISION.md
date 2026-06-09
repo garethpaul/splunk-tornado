@@ -17,6 +17,7 @@ Priority:
 - Preserve the `SplunkMixin` request and session-key flow
 - Keep Splunk username, password, and host path in application settings
 - Avoid logging credentials or session keys
+- Reject unsafe session-key values before building Authorization headers
 - Keep unauthorized request retries bounded per request
 - Avoid retrying upstream requests when session refresh fails
 - Parse XML responses without resolving external entities

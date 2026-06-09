@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Rejected CR/LF-bearing session keys before constructing Splunk Authorization
+  headers, with mocked regression coverage.
 - Narrowed XML and JSON parser exception handling and added regression coverage
   for invalid parser payloads.
 - Normalized Splunk response `Content-Type` casing before parser dispatch and

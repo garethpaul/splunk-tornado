@@ -58,6 +58,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   a live Splunk instance.
 - Auth retry tests verify that unauthorized requests retry at most once after a
   session-key refresh.
+- Header tests verify that session keys containing carriage returns or newlines
+  are rejected before Authorization headers are built.
 - Sync and async retry paths do not issue a second upstream request when the
   session refresh fails to produce a key.
 - XML response parsing disables entity resolution and network access before
@@ -96,6 +98,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   content-type normalization coverage.
 - See `docs/plans/2026-06-09-narrow-parser-exceptions.md` for parser exception
   handling coverage.
+- See `docs/plans/2026-06-09-session-key-header-guard.md` for the session-key
+  Authorization header boundary.
 
 ## Contributing
 

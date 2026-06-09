@@ -142,6 +142,12 @@ class SplunkMixinTests(unittest.TestCase):
             parse_qs(parts.query),
         )
 
+    def test_request_headers_rejects_newline_session_key(self):
+        handler = DummyHandler()
+
+        with self.assertRaises(ValueError):
+            handler.request_headers(session_key="abc\r\nX-Splunk-User: admin")
+
     def test_sync_request_preserves_error_responses_and_closes_client(self):
         handler = DummyHandler()
         original_client = tornado.httpclient.HTTPClient
