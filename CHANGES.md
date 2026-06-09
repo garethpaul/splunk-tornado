@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Rejected non-text session-key values before constructing Splunk Authorization
+  headers, with regression and static coverage.
 - Preserved repeated Splunk query and POST parameters by centralizing request
   argument encoding with `doseq=True`, with regression coverage.
 - Switched response parser dispatch to exact normalized media types, including

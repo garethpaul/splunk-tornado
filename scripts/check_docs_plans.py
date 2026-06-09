@@ -55,6 +55,12 @@ if '"\\r" in session_key or "\\n" in session_key' not in auth_source:
     failures.append("splunktornado/auth.py must reject newline characters in session keys before building headers")
 if 'raise ValueError("session_key must not contain newline characters")' not in auth_source:
     failures.append("splunktornado/auth.py must fail closed on unsafe session keys")
+if "string_types = (basestring,)" not in auth_source or "string_types = (str,)" not in auth_source:
+    failures.append("splunktornado/auth.py must define Python 2/3 text session-key types")
+if "if not isinstance(session_key, string_types):" not in auth_source:
+    failures.append("splunktornado/auth.py must reject non-text session keys before building headers")
+if 'raise ValueError("session_key must be text")' not in auth_source:
+    failures.append("splunktornado/auth.py must fail closed on non-text session keys")
 if "def response_content_type(self, response):" not in auth_source:
     failures.append("splunktornado/auth.py must centralize response content-type normalization")
 if '.split(";", 1)[0].strip().lower()' not in auth_source:

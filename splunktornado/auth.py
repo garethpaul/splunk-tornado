@@ -10,6 +10,11 @@ try:
 except ImportError:
     from urllib.parse import urlencode
 
+try:
+    string_types = (basestring,)
+except NameError:
+    string_types = (str,)
+
 class SplunkMixin(object):
     """General splunk services connection mixin with shared authentication and lazy session key updating if stale/non-existant."""
     retry_request = True
@@ -47,6 +52,8 @@ class SplunkMixin(object):
         """The splunk request headers with the Authorization session key if provided."""
         headers = {}
         if session_key:
+            if not isinstance(session_key, string_types):
+                raise ValueError("session_key must be text")
             if "\r" in session_key or "\n" in session_key:
                 raise ValueError("session_key must not contain newline characters")
             headers["Authorization"] = "Splunk %s" % session_key

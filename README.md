@@ -62,6 +62,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   repeated fields instead of collapsing into a Python list string.
 - Header tests verify that session keys containing carriage returns or newlines
   are rejected before Authorization headers are built.
+- Header tests also verify that non-text session key values are rejected before
+  Authorization headers are built.
 - Sync and async retry paths do not issue a second upstream request when the
   session refresh fails to produce a key.
 - XML response parsing disables entity resolution and network access before
@@ -104,6 +106,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   handling coverage.
 - See `docs/plans/2026-06-09-session-key-header-guard.md` for the session-key
   Authorization header boundary.
+- See `docs/plans/2026-06-09-text-session-key-guard.md` for the non-text
+  session-key header guard.
 - See `docs/plans/2026-06-09-exact-content-type-dispatch.md` for exact media
   type parser dispatch coverage.
 - See `docs/plans/2026-06-09-repeated-parameter-encoding.md` for repeated

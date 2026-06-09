@@ -180,6 +180,12 @@ class SplunkMixinTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             handler.request_headers(session_key="abc\r\nX-Splunk-User: admin")
 
+    def test_request_headers_rejects_non_text_session_key(self):
+        handler = DummyHandler()
+
+        with self.assertRaises(ValueError):
+            handler.request_headers(session_key=object())
+
     def test_sync_request_preserves_error_responses_and_closes_client(self):
         handler = DummyHandler()
         original_client = tornado.httpclient.HTTPClient
