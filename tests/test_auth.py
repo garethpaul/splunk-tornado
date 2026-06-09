@@ -1,5 +1,6 @@
 import unittest
 import tornado.httpclient
+import splunktornado.auth as auth_module
 
 try:
     from urllib.parse import parse_qs, urlsplit
@@ -57,6 +58,42 @@ class SplunkMixinTests(unittest.TestCase):
 
         self.assertIsNone(xml)
         self.assertEqual({"ok": True}, payload)
+        self.assertIsNone(text)
+
+    def test_parse_response_passes_safe_xml_parser(self):
+        response = Response("text/xml", b"<response />")
+        calls = []
+        original_fromstring = auth_module.et.fromstring
+
+        def fromstring(body, parser=None):
+            calls.append((body, parser))
+            return original_fromstring(b"<response />", parser=parser)
+
+        auth_module.et.fromstring = fromstring
+        try:
+            xml, payload, text = SplunkMixin().parse_response(response)
+        finally:
+            auth_module.et.fromstring = original_fromstring
+
+        self.assertEqual("response", xml.tag)
+        self.assertIsNone(payload)
+        self.assertIsNone(text)
+        self.assertEqual(b"<response />", calls[0][0])
+        self.assertIsNotNone(calls[0][1])
+
+    def test_parse_response_does_not_resolve_xml_entities(self):
+        body = (
+            b'<!DOCTYPE response ['
+            b'<!ENTITY external SYSTEM "file:///etc/passwd">'
+            b']><response>&external;</response>'
+        )
+
+        xml, payload, text = SplunkMixin().parse_response(Response("text/xml", body))
+
+        self.assertIsNotNone(xml)
+        self.assertIsNone(xml.text)
+        self.assertEqual("response", xml.tag)
+        self.assertIsNone(payload)
         self.assertIsNone(text)
 
     def test_request_url_encodes_query_parameters(self):

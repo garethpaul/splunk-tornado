@@ -19,6 +19,7 @@ Priority:
 - Avoid logging credentials or session keys
 - Keep unauthorized request retries bounded per request
 - Avoid retrying upstream requests when session refresh fails
+- Parse XML responses without resolving external entities
 - Keep completed maintenance plans under `docs/plans`
 - Treat Python 2 and older Tornado APIs as legacy constraints
 
@@ -50,6 +51,7 @@ all upstream request paths explicit.
 
 - Credential or session-key logging
 - Unbounded retries
+- XML parsing that can resolve external entities or use network access
 - Hidden proxying to arbitrary Splunk paths
 - Live-service-only tests
 

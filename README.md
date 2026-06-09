@@ -60,6 +60,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   session-key refresh.
 - Sync and async retry paths do not issue a second upstream request when the
   session refresh fails to produce a key.
+- XML response parsing disables entity resolution and network access before
+  handing Splunk responses to `lxml`.
 - `make check` also requires completed canonical plans under `docs/plans`.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
@@ -84,6 +86,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   unauthorized retry guard.
 - See `docs/plans/2026-06-08-sync-refresh-failure.md` for the sync retry
   refresh-failure guard.
+- See `docs/plans/2026-06-09-safe-xml-parser.md` for the XML parser hardening
+  guard.
 
 ## Contributing
 

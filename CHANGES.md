@@ -1,5 +1,11 @@
 # Changes
 
+## 2026-06-09
+
+- Added a no-network, no-entity-resolution XML parser for Splunk XML responses.
+- Added mocked and entity-response coverage plus a static source guard for safe
+  XML parsing under `make check`.
+
 ## 2026-06-08
 
 - Stopped sync requests from retrying 401 responses when session refresh fails

@@ -34,6 +34,12 @@ for plan_path in plans:
     if "Status: Completed" not in plan or "make check" not in plan:
         failures.append("%s must record completed status and make check verification" % rel(plan_path))
 
+auth_source = read(os.path.join(ROOT, "splunktornado", "auth.py"))
+if "XMLParser(resolve_entities=False, no_network=True)" not in auth_source:
+    failures.append("splunktornado/auth.py must create XMLParser with entity resolution disabled and no network access")
+if "et.fromstring(response.body)" in auth_source:
+    failures.append("splunktornado/auth.py must not parse XML responses without the safe parser")
+
 if failures:
     print("Documentation plan checks failed:\n- %s" % "\n- ".join(failures), file=sys.stderr)
     sys.exit(1)

@@ -65,6 +65,9 @@ class SplunkMixin(object):
         else:
             logging.info("Could not retrieve Splunk session_key")
             return None
+
+    def xml_parser(self):
+        return et.XMLParser(resolve_entities=False, no_network=True)
     
     def sync_request(self, pathname, post_args=None, session_key=None, retry_on_unauthorized=True, **kwargs):
         """"
@@ -135,7 +138,7 @@ class SplunkMixin(object):
         content = response.headers.get("Content-Type", "")    
         if content.find("text/xml")!=-1:
             try:
-                xml = et.fromstring(response.body)
+                xml = et.fromstring(response.body, parser=self.xml_parser())
             except:
                 logging.warning("Could not parse xml")
                 return None, None, None
