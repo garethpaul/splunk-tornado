@@ -10,6 +10,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DOCS_PLANS = os.path.join(ROOT, "docs", "plans")
 CANONICAL_PLAN = os.path.join(DOCS_PLANS, "2026-06-08-splunk-tornado-baseline.md")
 CONTENT_DISPATCH_PLAN = os.path.join(DOCS_PLANS, "2026-06-09-exact-content-type-dispatch.md")
+REPEATED_ARGS_PLAN = os.path.join(DOCS_PLANS, "2026-06-09-repeated-parameter-encoding.md")
 
 
 def rel(path):
@@ -27,6 +28,8 @@ if not os.path.isfile(CANONICAL_PLAN):
     failures.append("%s is missing" % rel(CANONICAL_PLAN))
 if not os.path.isfile(CONTENT_DISPATCH_PLAN):
     failures.append("%s is missing" % rel(CONTENT_DISPATCH_PLAN))
+if not os.path.isfile(REPEATED_ARGS_PLAN):
+    failures.append("%s is missing" % rel(REPEATED_ARGS_PLAN))
 
 plans = sorted(glob.glob(os.path.join(DOCS_PLANS, "*.md")))
 if not plans:
@@ -64,6 +67,16 @@ if 'content == "application/json"' not in auth_source:
     failures.append("splunktornado/auth.py must dispatch JSON parsing by exact media type")
 if 'content == "text/plain"' not in auth_source:
     failures.append("splunktornado/auth.py must dispatch text parsing by exact media type")
+if "def encode_args(self, args):" not in auth_source:
+    failures.append("splunktornado/auth.py must centralize request argument encoding")
+if "urlencode(args, doseq=True)" not in auth_source:
+    failures.append("splunktornado/auth.py must preserve repeated request arguments with doseq=True")
+if "urlencode(kwargs)" in auth_source or "urlencode(post_args)" in auth_source:
+    failures.append("splunktornado/auth.py must not directly encode query or post args without doseq=True")
+if "self.encode_args(kwargs)" not in auth_source:
+    failures.append("splunktornado/auth.py must use shared encoding for query parameters")
+if "self.encode_args(post_args)" not in auth_source:
+    failures.append("splunktornado/auth.py must use shared encoding for POST parameters")
 
 if failures:
     print("Documentation plan checks failed:\n- %s" % "\n- ".join(failures), file=sys.stderr)

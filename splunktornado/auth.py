@@ -31,12 +31,16 @@ class SplunkMixin(object):
         """Refreshes the session key application global attribute."""
         self.session_key = self.request_session_key()
 
+    def encode_args(self, args):
+        """Encode Splunk request arguments, preserving repeated parameters."""
+        return urlencode(args, doseq=True)
+
     def request_url(self, pathname, **kwargs):
         """A fully qualified splunk services uri including encoded get params as **kwargs"""
         self.require_setting("splunk_host_path", "Splunk Connect")
         url = "%s%s" % (self.settings["splunk_host_path"], pathname)
         if kwargs:
-            url += "?" + urlencode(kwargs)
+            url += "?" + self.encode_args(kwargs)
         return url
 
     def request_headers(self, session_key=None):
@@ -82,7 +86,7 @@ class SplunkMixin(object):
         try:
             fetch_kwargs = {"headers": headers, "raise_error": False}
             if post_args is not None:
-                fetch_kwargs.update({"method": "POST", "body": urlencode(post_args)})
+                fetch_kwargs.update({"method": "POST", "body": self.encode_args(post_args)})
             response = http.fetch(url, **fetch_kwargs)
         finally:
             http.close()
@@ -110,7 +114,7 @@ class SplunkMixin(object):
         callback=self.async_callback(self._on_async_response, pathname, callback, post_args=post_args, session_key=session_key, streaming_callback=streaming_callback, request_timeout=request_timeout, retry_on_unauthorized=retry_on_unauthorized, **kwargs)
         http = tornado.httpclient.AsyncHTTPClient()
         if post_args is not None:
-            http.fetch(url, method="POST", body=urlencode(post_args), callback=callback, headers=headers, streaming_callback=streaming_callback, request_timeout=request_timeout, raise_error=False)
+            http.fetch(url, method="POST", body=self.encode_args(post_args), callback=callback, headers=headers, streaming_callback=streaming_callback, request_timeout=request_timeout, raise_error=False)
         else:
             http.fetch(url, callback=callback, headers=headers, streaming_callback=streaming_callback, request_timeout=request_timeout, raise_error=False)
 

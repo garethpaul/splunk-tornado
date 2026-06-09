@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Preserved repeated Splunk query and POST parameters by centralizing request
+  argument encoding with `doseq=True`, with regression coverage.
 - Switched response parser dispatch to exact normalized media types, including
   `application/xml`, and added coverage for near-match content types.
 - Rejected CR/LF-bearing session keys before constructing Splunk Authorization

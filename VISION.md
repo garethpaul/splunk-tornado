@@ -20,6 +20,7 @@ Priority:
 - Reject unsafe session-key values before building Authorization headers
 - Keep unauthorized request retries bounded per request
 - Avoid retrying upstream requests when session refresh fails
+- Preserve repeated Splunk query and form parameters during request encoding
 - Parse XML responses without resolving external entities
 - Normalize response content types before parser dispatch
 - Dispatch parsers by exact response media type, not substring matches
@@ -38,6 +39,7 @@ Contribution rules:
 - One PR = one focused auth, request, parser, test, or documentation change.
 - Do not commit Splunk credentials, hostnames, or session keys.
 - Keep retries bounded and observable.
+- Preserve repeated request parameters when encoding Splunk API calls.
 - Add fixtures for response parsing changes.
 
 ## Security And Responsible Use

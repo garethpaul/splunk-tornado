@@ -160,6 +160,20 @@ class SplunkMixinTests(unittest.TestCase):
             parse_qs(parts.query),
         )
 
+    def test_request_url_encodes_repeated_query_parameters(self):
+        handler = DummyHandler()
+
+        url = handler.request_url(
+            "/services/search/jobs",
+            f=["host", "source"],
+        )
+
+        parts = urlsplit(url)
+        self.assertEqual(
+            {"f": ["host", "source"]},
+            parse_qs(parts.query),
+        )
+
     def test_request_headers_rejects_newline_session_key(self):
         handler = DummyHandler()
 
@@ -196,6 +210,25 @@ class SplunkMixinTests(unittest.TestCase):
         self.assertEqual("POST", kwargs["method"])
         self.assertEqual("search=index%3Dmain", kwargs["body"])
         self.assertEqual({"Authorization": "Splunk abc123"}, kwargs["headers"])
+
+    def test_sync_request_encodes_repeated_post_parameters(self):
+        handler = DummyHandler()
+        original_client = tornado.httpclient.HTTPClient
+        FakeHTTPClient.instances = []
+        FakeHTTPClient.response = Response("text/plain", b"ok")
+        tornado.httpclient.HTTPClient = FakeHTTPClient
+        try:
+            handler.sync_request(
+                "/services/search/jobs",
+                post_args={"f": ["host", "source"]},
+                session_key="abc123",
+            )
+        finally:
+            tornado.httpclient.HTTPClient = original_client
+            FakeHTTPClient.response = Response("text/plain", b"ok")
+
+        body = FakeHTTPClient.instances[0].calls[0][1]["body"]
+        self.assertEqual(["host", "source"], parse_qs(body)["f"])
 
     def test_sync_request_retries_unauthorized_once(self):
         handler = DummyHandler()

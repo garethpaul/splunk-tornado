@@ -58,6 +58,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   a live Splunk instance.
 - Auth retry tests verify that unauthorized requests retry at most once after a
   session-key refresh.
+- Request encoding tests verify that repeated query and POST parameters remain
+  repeated fields instead of collapsing into a Python list string.
 - Header tests verify that session keys containing carriage returns or newlines
   are rejected before Authorization headers are built.
 - Sync and async retry paths do not issue a second upstream request when the
@@ -104,6 +106,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   Authorization header boundary.
 - See `docs/plans/2026-06-09-exact-content-type-dispatch.md` for exact media
   type parser dispatch coverage.
+- See `docs/plans/2026-06-09-repeated-parameter-encoding.md` for repeated
+  request parameter encoding coverage.
 
 ## Contributing
 
