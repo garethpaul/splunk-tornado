@@ -11,6 +11,8 @@ DOCS_PLANS = os.path.join(ROOT, "docs", "plans")
 CANONICAL_PLAN = os.path.join(DOCS_PLANS, "2026-06-08-splunk-tornado-baseline.md")
 CONTENT_DISPATCH_PLAN = os.path.join(DOCS_PLANS, "2026-06-09-exact-content-type-dispatch.md")
 REPEATED_ARGS_PLAN = os.path.join(DOCS_PLANS, "2026-06-09-repeated-parameter-encoding.md")
+CI_PLAN = os.path.join(DOCS_PLANS, "2026-06-10-ci-baseline.md")
+CI_WORKFLOW = os.path.join(ROOT, ".github", "workflows", "check.yml")
 
 
 def rel(path):
@@ -30,6 +32,10 @@ if not os.path.isfile(CONTENT_DISPATCH_PLAN):
     failures.append("%s is missing" % rel(CONTENT_DISPATCH_PLAN))
 if not os.path.isfile(REPEATED_ARGS_PLAN):
     failures.append("%s is missing" % rel(REPEATED_ARGS_PLAN))
+if not os.path.isfile(CI_PLAN):
+    failures.append("%s is missing" % rel(CI_PLAN))
+if not os.path.isfile(CI_WORKFLOW):
+    failures.append("%s is missing" % rel(CI_WORKFLOW))
 
 plans = sorted(glob.glob(os.path.join(DOCS_PLANS, "*.md")))
 if not plans:
@@ -39,6 +45,41 @@ for plan_path in plans:
     plan = read(plan_path)
     if "Status: Completed" not in plan or "make check" not in plan:
         failures.append("%s must record completed status and make check verification" % rel(plan_path))
+
+if os.path.isfile(CI_WORKFLOW):
+    workflow = read(CI_WORKFLOW)
+    required_workflow_phrases = (
+        "uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10",
+        "uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405",
+        'python-version: "3.12"',
+        "permissions:",
+        "contents: read",
+        "timeout-minutes: 5",
+        "workflow_dispatch:",
+        "python -m pip install -r requirements.txt -r requirements-dev.txt",
+        "run: make check",
+    )
+    for phrase in required_workflow_phrases:
+        if phrase not in workflow:
+            failures.append("%s must contain %s" % (rel(CI_WORKFLOW), phrase))
+
+requirements = read(os.path.join(ROOT, "requirements.txt"))
+requirements_dev = read(os.path.join(ROOT, "requirements-dev.txt"))
+setup_source = read(os.path.join(ROOT, "setup.py"))
+for requirement in ("lxml==6.1.1", "tornado==6.5.6"):
+    if requirement not in requirements:
+        failures.append("requirements.txt must pin %s" % requirement)
+for requirement in ("pip-audit==2.10.0", "setuptools==82.0.1"):
+    if requirement not in requirements_dev:
+        failures.append("requirements-dev.txt must pin %s" % requirement)
+for requirement in ("lxml>=6.1.1,<7", "tornado>=6.5.6,<7"):
+    if requirement not in setup_source:
+        failures.append("setup.py must bound runtime dependency %s" % requirement)
+
+for docs_file in ("README.md", "VISION.md", "SECURITY.md", "CHANGES.md"):
+    docs_path = os.path.join(ROOT, docs_file)
+    if not os.path.isfile(docs_path) or "GitHub Actions" not in read(docs_path):
+        failures.append("%s must document the GitHub Actions baseline" % docs_file)
 
 auth_source = read(os.path.join(ROOT, "splunktornado", "auth.py"))
 if "XMLParser(resolve_entities=False, no_network=True)" not in auth_source:

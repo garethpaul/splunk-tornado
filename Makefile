@@ -1,4 +1,4 @@
-.PHONY: build check lint test verify
+.PHONY: audit build check lint test verify
 
 PYTHON ?= python3
 
@@ -14,4 +14,7 @@ build: lint
 
 verify: lint test build
 
-check: verify
+audit:
+	$(PYTHON) -m pip_audit -r requirements.txt -r requirements-dev.txt
+
+check: verify audit

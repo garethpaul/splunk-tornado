@@ -1,5 +1,15 @@
 # Changes
 
+## 2026-06-10
+
+- Added a least-privilege GitHub Actions workflow using pinned Node 24 actions
+  to run the Python 3.12 `make check` baseline.
+- Pinned verified Tornado 6.5.6, lxml 6.1.1, setuptools 82.0.1, and pip-audit
+  2.10.0 baselines, with bounded runtime package metadata and vulnerability
+  auditing.
+- Added a docs/source guard requiring the CI workflow and completed CI baseline
+  plan to remain checked in.
+
 ## 2026-06-09
 
 - Rejected non-text session-key values before constructing Splunk Authorization

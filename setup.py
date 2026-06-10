@@ -23,6 +23,6 @@ setup_kwargs = dict(
 )
 
 if HAS_SETUPTOOLS:
-    setup_kwargs["install_requires"] = ["lxml", "tornado"]
+    setup_kwargs["install_requires"] = ["lxml>=6.1.1,<7", "tornado>=6.5.6,<7"]
 
 setup(**setup_kwargs)
