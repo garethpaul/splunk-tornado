@@ -2,6 +2,8 @@
 
 ## 2026-06-10
 
+- Replaced removed Tornado callback helpers with future-based async request
+  completion while preserving the public response callback behavior.
 - Added pinned PEP 517 wheel and source-distribution builds with Python >=3.10
   package metadata.
 - Expanded GitHub Actions to fixed Ubuntu 24.04 runners across Python 3.10,

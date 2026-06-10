@@ -26,6 +26,7 @@ Priority:
 - Normalize response content types before parser dispatch
 - Dispatch parsers by exact response media type, not substring matches
 - Keep parser exception handling narrow and observable
+- Keep asynchronous requests compatible with Tornado's supported future API
 - Keep completed maintenance plans under `docs/plans`
 - Keep GitHub Actions running package builds, tests, and audits across the
   supported Python matrix before review

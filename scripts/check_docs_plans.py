@@ -13,6 +13,7 @@ CONTENT_DISPATCH_PLAN = os.path.join(DOCS_PLANS, "2026-06-09-exact-content-type-
 REPEATED_ARGS_PLAN = os.path.join(DOCS_PLANS, "2026-06-09-repeated-parameter-encoding.md")
 CI_PLAN = os.path.join(DOCS_PLANS, "2026-06-10-ci-baseline.md")
 PACKAGE_PLAN = os.path.join(DOCS_PLANS, "2026-06-10-package-build-matrix.md")
+ASYNC_PLAN = os.path.join(DOCS_PLANS, "2026-06-10-tornado-future-async.md")
 CI_WORKFLOW = os.path.join(ROOT, ".github", "workflows", "check.yml")
 
 
@@ -37,6 +38,8 @@ if not os.path.isfile(CI_PLAN):
     failures.append("%s is missing" % rel(CI_PLAN))
 if not os.path.isfile(PACKAGE_PLAN):
     failures.append("%s is missing" % rel(PACKAGE_PLAN))
+if not os.path.isfile(ASYNC_PLAN):
+    failures.append("%s is missing" % rel(ASYNC_PLAN))
 if not os.path.isfile(CI_WORKFLOW):
     failures.append("%s is missing" % rel(CI_WORKFLOW))
 
@@ -110,6 +113,12 @@ for docs_file in ("README.md", "VISION.md", "SECURITY.md", "CHANGES.md"):
         failures.append("%s must document the GitHub Actions baseline" % docs_file)
 
 auth_source = read(os.path.join(ROOT, "splunktornado", "auth.py"))
+if "self.async_callback(" in auth_source:
+    failures.append("splunktornado/auth.py must not use the removed Tornado async_callback helper")
+if "callback=callback" in auth_source:
+    failures.append("splunktornado/auth.py must not pass the removed callback argument to AsyncHTTPClient.fetch")
+if "future.add_done_callback(" not in auth_source:
+    failures.append("splunktornado/auth.py must dispatch async responses through the Tornado future API")
 if "XMLParser(resolve_entities=False, no_network=True)" not in auth_source:
     failures.append("splunktornado/auth.py must create XMLParser with entity resolution disabled and no network access")
 if "et.fromstring(response.body)" in auth_source:

@@ -50,6 +50,30 @@ class FakeHTTPClient(object):
         self.closed = True
 
 
+class FakeFuture(object):
+    def __init__(self, response):
+        self.response = response
+
+    def add_done_callback(self, callback):
+        callback(self)
+
+    def result(self):
+        return self.response
+
+
+class FakeAsyncHTTPClient(object):
+    instances = []
+    response = Response("text/plain", b"ok")
+
+    def __init__(self):
+        self.calls = []
+        self.instances.append(self)
+
+    def fetch(self, url, **kwargs):
+        self.calls.append((url, kwargs))
+        return FakeFuture(self.response)
+
+
 class SplunkMixinTests(unittest.TestCase):
     def test_parse_response_decodes_json(self):
         response = Response("application/json", b'{"ok": true}')
@@ -309,6 +333,39 @@ class SplunkMixinTests(unittest.TestCase):
             {"Authorization": "Splunk stale"},
             FakeHTTPClient.instances[0].calls[0][1]["headers"],
         )
+
+    def test_async_request_uses_tornado_future_api(self):
+        handler = DummyHandler()
+        handler.request = type("Request", (), {
+            "connection": type("Connection", (), {
+                "stream": type("Stream", (), {"closed": lambda self: False})()
+            })()
+        })()
+        callback_calls = []
+        original_client = tornado.httpclient.AsyncHTTPClient
+        FakeAsyncHTTPClient.instances = []
+        tornado.httpclient.AsyncHTTPClient = FakeAsyncHTTPClient
+        try:
+            handler.async_request(
+                "/services/search/jobs",
+                lambda response, **kwargs: callback_calls.append((response, kwargs)),
+                post_args={"search": "index=main"},
+                session_key="abc123",
+                request_timeout=9.0,
+            )
+        finally:
+            tornado.httpclient.AsyncHTTPClient = original_client
+
+        self.assertEqual(1, len(FakeAsyncHTTPClient.instances))
+        url, fetch_kwargs = FakeAsyncHTTPClient.instances[0].calls[0]
+        self.assertEqual("https://splunk.example:8089/services/search/jobs", url)
+        self.assertNotIn("callback", fetch_kwargs)
+        self.assertEqual("POST", fetch_kwargs["method"])
+        self.assertEqual("search=index%3Dmain", fetch_kwargs["body"])
+        self.assertEqual({"Authorization": "Splunk abc123"}, fetch_kwargs["headers"])
+        self.assertEqual(9.0, fetch_kwargs["request_timeout"])
+        self.assertEqual(1, len(callback_calls))
+        self.assertEqual(b"ok", callback_calls[0][1]["text"])
 
     def test_async_request_retries_unauthorized_once(self):
         handler = DummyHandler()

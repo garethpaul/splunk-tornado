@@ -34,6 +34,8 @@ Helpful reports include:
   `make check` baseline across Python 3.10, 3.12, and 3.14 before review.
 - The baseline pins and audits Tornado and lxml; CI actions are pinned by
   commit and run with read-only repository contents permission.
+- Async Splunk requests use Tornado 6's supported future completion path so
+  authentication retries and response callbacks execute under the pinned API.
 
 ## Service and API Notes
 

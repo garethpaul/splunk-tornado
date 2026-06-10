@@ -64,6 +64,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   a live Splunk instance.
 - Auth retry tests verify that unauthorized requests retry at most once after a
   session-key refresh.
+- Async requests use Tornado 6's future-returning HTTP client API while keeping
+  the mixin's existing response callback contract.
 - Request encoding tests verify that repeated query and POST parameters remain
   repeated fields instead of collapsing into a Python list string.
 - Header tests verify that session keys containing carriage returns or newlines
@@ -119,6 +121,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-09-repeated-parameter-encoding.md` for repeated
   request parameter encoding coverage.
 - See `docs/plans/2026-06-10-ci-baseline.md` for the GitHub Actions baseline.
+- See `docs/plans/2026-06-10-tornado-future-async.md` for the Tornado 6 async
+  request compatibility fix.
 
 ## Contributing
 

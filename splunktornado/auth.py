@@ -2,6 +2,7 @@
 
 import tornado.httpclient
 from tornado import escape
+from functools import partial
 import logging
 import lxml.etree as et
 
@@ -118,12 +119,21 @@ class SplunkMixin(object):
         """
         url = self.request_url(pathname, **kwargs)
         headers = self.request_headers(session_key=session_key)
-        callback=self.async_callback(self._on_async_response, pathname, callback, post_args=post_args, session_key=session_key, streaming_callback=streaming_callback, request_timeout=request_timeout, retry_on_unauthorized=retry_on_unauthorized, **kwargs)
+        response_callback = partial(self._on_async_response, pathname, callback, post_args=post_args, session_key=session_key, streaming_callback=streaming_callback, request_timeout=request_timeout, retry_on_unauthorized=retry_on_unauthorized, **kwargs)
         http = tornado.httpclient.AsyncHTTPClient()
+        fetch_kwargs = {
+            "headers": headers,
+            "streaming_callback": streaming_callback,
+            "request_timeout": request_timeout,
+            "raise_error": False,
+        }
         if post_args is not None:
-            http.fetch(url, method="POST", body=self.encode_args(post_args), callback=callback, headers=headers, streaming_callback=streaming_callback, request_timeout=request_timeout, raise_error=False)
-        else:
-            http.fetch(url, callback=callback, headers=headers, streaming_callback=streaming_callback, request_timeout=request_timeout, raise_error=False)
+            fetch_kwargs.update({"method": "POST", "body": self.encode_args(post_args)})
+        future = http.fetch(url, **fetch_kwargs)
+        future.add_done_callback(partial(self._on_async_fetch_complete, response_callback))
+
+    def _on_async_fetch_complete(self, callback, future):
+        callback(future.result())
 
     def _on_async_response(self, pathname, callback, response, post_args=None, session_key=None, streaming_callback=None, request_timeout=20.0, retry_on_unauthorized=True, **kwargs):
         """Reponse handler for asynchronous requests."""
