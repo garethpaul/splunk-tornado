@@ -27,7 +27,8 @@ Priority:
 - Dispatch parsers by exact response media type, not substring matches
 - Keep parser exception handling narrow and observable
 - Keep completed maintenance plans under `docs/plans`
-- Keep GitHub Actions running the Python `make check` baseline before review
+- Keep GitHub Actions running package builds, tests, and audits across the
+  supported Python matrix before review
 - Treat Python 2 and older Tornado APIs as legacy constraints
 
 Next priorities:

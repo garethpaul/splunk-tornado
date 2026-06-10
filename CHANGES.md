@@ -2,6 +2,13 @@
 
 ## 2026-06-10
 
+- Added pinned PEP 517 wheel and source-distribution builds with Python >=3.10
+  package metadata.
+- Expanded GitHub Actions to fixed Ubuntu 24.04 runners across Python 3.10,
+  3.12, and 3.14 with concurrency cancellation.
+- Made all Makefile checks independent of the caller's working directory.
+- Included the Markdown long description and requirement inputs in source
+  distributions so wheel builds from the sdist do not fail.
 - Added a least-privilege GitHub Actions workflow using pinned Node 24 actions
   to run the Python 3.12 `make check` baseline.
 - Pinned verified Tornado 6.5.6, lxml 6.1.1, setuptools 82.0.1, and pip-audit

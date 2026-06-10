@@ -53,10 +53,11 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 
 ## Testing and Verification
 
-- `make check` runs Python syntax checks, unit tests, and `setup.py check`.
+- `make check` runs Python syntax checks, unit tests, a PEP 517 wheel/sdist
+  build, and dependency auditing.
 - GitHub Actions installs pinned runtime and development requirements and runs
-  `make check` through `.github/workflows/check.yml` with pinned Node 24
-  actions, read-only permissions, and a timeout.
+  `make check` on fixed Ubuntu 24.04 runners across Python 3.10, 3.12, and
+  3.14, with pinned Node 24 actions, read-only permissions, and timeouts.
 - `make check` audits the pinned Tornado 6 and lxml 6 baseline for known
   vulnerabilities after the offline unit and packaging checks.
 - The tests mock response objects and Tornado HTTP clients; they do not require
