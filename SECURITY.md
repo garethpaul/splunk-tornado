@@ -33,9 +33,19 @@ Helpful reports include:
 - GitHub Actions installs checked-in requirements and runs the Python
   `make check` baseline across Python 3.10, 3.12, and 3.14 before review.
 - The baseline pins and audits Tornado and lxml; CI actions are pinned by
-  commit and run with read-only repository contents permission.
+  commit and run with read-only repository contents permission and
+  credential-free checkout on every push and pull request.
 - Async Splunk requests use Tornado 6's supported future completion path so
   authentication retries and response callbacks execute under the pinned API.
+- Splunk response bodies are limited to 1 MiB at the Tornado transport layer,
+  including streamed responses, and checked again before in-memory parser
+  dispatch to reduce denial-of-service risk from oversized upstream data. The
+  mixin selects `SimpleAsyncHTTPClient`, whose constructor enforces that cap.
+- Async unauthorized responses use a non-blocking login request, validate the
+  returned session key, and replay at most once. Login failure returns the
+  original 401 instead of blocking the event loop or widening retry behavior.
+- Synchronous and asynchronous login keys pass through the same Authorization
+  header validation before refresh updates shared authentication state.
 
 ## Service and API Notes
 

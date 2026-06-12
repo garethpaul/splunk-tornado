@@ -14,10 +14,12 @@ failed before the HTTP client could send it on the supported runtime.
 - Replaced `async_callback` with a bound `functools.partial` response handler.
 - Consumed the future returned by `AsyncHTTPClient.fetch` through
   `add_done_callback`.
+- Converted future transport exceptions back into callback-delivered
+  `HTTPResponse` objects so callers cannot hang waiting for a callback.
 - Preserved POST encoding, headers, streaming callbacks, timeouts, response
   parsing, and the public callback shape.
-- Added a no-network regression test and static guards for the Tornado 6 API
-  contract.
+- Added no-network success, retry, and transport-failure regression tests plus
+  static guards for the Tornado 6 API contract.
 
 ## Verification
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import tornado.httpclient
+from tornado.simple_httpclient import SimpleAsyncHTTPClient
 from tornado import escape
 from functools import partial
 import logging
@@ -19,6 +20,7 @@ except NameError:
 class SplunkMixin(object):
     """General splunk services connection mixin with shared authentication and lazy session key updating if stale/non-existant."""
     retry_request = True
+    max_response_body_size = 1024 * 1024
     
     def get_session_key(self):
         """Session key getter, elegantly retrieves from application global attributes."""
@@ -73,12 +75,43 @@ class SplunkMixin(object):
             post_args=post_args,
             retry_on_unauthorized=False,
         )
-        if response.error is None and xml is not None:
+        session_key = self._session_key_from_xml(xml) if response.error is None else None
+        if session_key:
             logging.info("Successfully retrieved Splunk session_key")
-            return xml.findtext("sessionKey")
-        else:
-            logging.info("Could not retrieve Splunk session_key")
+            return session_key
+        logging.info("Could not retrieve Splunk session_key")
+        return None
+
+    def _request_session_key_async(self, callback):
+        """Retrieve a session key without blocking Tornado's event loop."""
+        self.require_setting("splunk_username", "Splunk Connect")
+        self.require_setting("splunk_password", "Splunk Connect")
+        post_args = {
+          "username": self.settings["splunk_username"],
+          "password": self.settings["splunk_password"],
+        }
+        self.async_request(
+            "/services/auth/login",
+            partial(self._on_async_session_key, callback),
+            post_args=post_args,
+            retry_on_unauthorized=False,
+        )
+
+    def _on_async_session_key(self, callback, response, xml=None, json=None, text=None):
+        session_key = self._session_key_from_xml(xml) if response.error is None else None
+        callback(session_key)
+
+    def _session_key_from_xml(self, xml):
+        if xml is None:
             return None
+        session_key = xml.findtext("sessionKey")
+        if not session_key:
+            return None
+        try:
+            self.request_headers(session_key=session_key)
+        except ValueError:
+            return None
+        return session_key
 
     def xml_parser(self):
         return et.XMLParser(resolve_entities=False, no_network=True)
@@ -90,7 +123,10 @@ class SplunkMixin(object):
         """
         url = self.request_url(pathname, **kwargs)
         headers = self.request_headers(session_key=session_key)
-        http = tornado.httpclient.HTTPClient()
+        http = tornado.httpclient.HTTPClient(
+            async_client_class=SimpleAsyncHTTPClient,
+            max_body_size=self.max_response_body_size,
+        )
         try:
             fetch_kwargs = {"headers": headers, "raise_error": False}
             if post_args is not None:
@@ -99,7 +135,7 @@ class SplunkMixin(object):
         finally:
             http.close()
         if response.error:
-            if response.error.code==401 and self.retry_request and retry_on_unauthorized:
+            if response.code == 401 and self.retry_request and retry_on_unauthorized:
                 self.refresh_session_key()
                 if self.session_key:
                     return self.sync_request(
@@ -120,20 +156,41 @@ class SplunkMixin(object):
         url = self.request_url(pathname, **kwargs)
         headers = self.request_headers(session_key=session_key)
         response_callback = partial(self._on_async_response, pathname, callback, post_args=post_args, session_key=session_key, streaming_callback=streaming_callback, request_timeout=request_timeout, retry_on_unauthorized=retry_on_unauthorized, **kwargs)
-        http = tornado.httpclient.AsyncHTTPClient()
+        http = SimpleAsyncHTTPClient(
+            force_instance=True,
+            max_body_size=self.max_response_body_size,
+        )
         fetch_kwargs = {
             "headers": headers,
             "streaming_callback": streaming_callback,
             "request_timeout": request_timeout,
-            "raise_error": False,
         }
         if post_args is not None:
             fetch_kwargs.update({"method": "POST", "body": self.encode_args(post_args)})
-        future = http.fetch(url, **fetch_kwargs)
-        future.add_done_callback(partial(self._on_async_fetch_complete, response_callback))
+        request = tornado.httpclient.HTTPRequest(url, **fetch_kwargs)
+        try:
+            future = http.fetch(request, raise_error=False)
+        except Exception:
+            http.close()
+            raise
+        future.add_done_callback(partial(self._on_async_fetch_complete, response_callback, request, http))
 
-    def _on_async_fetch_complete(self, callback, future):
-        callback(future.result())
+    def _on_async_fetch_complete(self, callback, request, http, future):
+        try:
+            response = future.result()
+        except Exception as error:
+            response = getattr(error, "response", None)
+            if response is None:
+                response = tornado.httpclient.HTTPResponse(
+                    request,
+                    getattr(error, "code", 599),
+                    effective_url=request.url,
+                    error=error,
+                    reason=str(error),
+                )
+        finally:
+            http.close()
+        callback(response)
 
     def _on_async_response(self, pathname, callback, response, post_args=None, session_key=None, streaming_callback=None, request_timeout=20.0, retry_on_unauthorized=True, **kwargs):
         """Reponse handler for asynchronous requests."""
@@ -141,17 +198,37 @@ class SplunkMixin(object):
             return
         else:
             if response.error:
-                if response.error.code==401 and self.retry_request and retry_on_unauthorized:
-                    self.refresh_session_key()
-                    if self.session_key:
-                        logging.info("Retry request with fresh session key")
-                        self.async_request(pathname, callback, post_args=post_args, session_key=self.session_key, streaming_callback=streaming_callback, request_timeout=request_timeout, retry_on_unauthorized=False, **kwargs)
-                        return
-                    else:
-                        callback(response)
-                        return
+                if response.code == 401 and self.retry_request and retry_on_unauthorized:
+                    self._request_session_key_async(partial(
+                        self._on_async_session_refresh,
+                        pathname,
+                        callback,
+                        response,
+                        post_args=post_args,
+                        streaming_callback=streaming_callback,
+                        request_timeout=request_timeout,
+                        **kwargs
+                    ))
+                    return
             xml, json, text = self.parse_response(response)
             callback(response, xml=xml, json=json, text=text)    
+
+    def _on_async_session_refresh(self, pathname, callback, original_response, session_key, post_args=None, streaming_callback=None, request_timeout=20.0, **kwargs):
+        self.session_key = session_key
+        if not session_key:
+            callback(original_response)
+            return
+        logging.info("Retry request with fresh session key")
+        self.async_request(
+            pathname,
+            callback,
+            post_args=post_args,
+            session_key=session_key,
+            streaming_callback=streaming_callback,
+            request_timeout=request_timeout,
+            retry_on_unauthorized=False,
+            **kwargs
+        )
 
     def response_content_type(self, response):
         return response.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
@@ -161,6 +238,11 @@ class SplunkMixin(object):
         General splunk http response parser based on reponse content-type.
         Returns a tuple xml, json and text where xml, json and text are None type if not serializable from response/content-type.
         """
+        body = response.body or b""
+        if len(body) > self.max_response_body_size:
+            logging.warning("Splunk response body exceeded the configured limit")
+            return None, None, None
+
         content = self.response_content_type(response)
         if content in ("text/xml", "application/xml"):
             try:

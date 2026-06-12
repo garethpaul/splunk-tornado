@@ -57,15 +57,31 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   build, and dependency auditing.
 - GitHub Actions installs pinned runtime and development requirements and runs
   `make check` on fixed Ubuntu 24.04 runners across Python 3.10, 3.12, and
-  3.14, with pinned Node 24 actions, read-only permissions, and timeouts.
+  3.14 for every push and pull request, with pinned Node 24 actions, read-only
+  permissions, credential-free checkout, and timeouts.
+- Each hosted matrix job also reruns `make check` from a temporary directory to
+  enforce path-independent Makefile behavior.
 - `make check` audits the pinned Tornado 6 and lxml 6 baseline for known
   vulnerabilities after the offline unit and packaging checks.
 - The tests mock response objects and Tornado HTTP clients; they do not require
   a live Splunk instance.
 - Auth retry tests verify that unauthorized requests retry at most once after a
   session-key refresh.
+- Async 401 handling refreshes the session key through the bounded non-blocking
+  login request, then replays the original request once only after receiving a
+  safe non-empty key. Failed refreshes return the original unauthorized
+  response.
+- Sync and async login responses share one validator that rejects missing or
+  CR/LF-bearing session keys before storing or replaying them.
 - Async requests use Tornado 6's future-returning HTTP client API while keeping
-  the mixin's existing response callback contract.
+  the mixin's existing response callback contract, including transport errors.
+- Sync, async, retried, and streamed Splunk responses are capped at 1 MiB by
+  Tornado's `SimpleAsyncHTTPClient` before parsing; custom response objects
+  receive the same defensive parser check. The bounded mixin does not use a
+  globally configured curl client because Tornado's curl implementation has no
+  equivalent `max_body_size` constructor policy.
+- Version 0.2.0 is the first package baseline requiring Python 3.10+, Tornado
+  6.5.6+, and lxml 6.1.1+.
 - Request encoding tests verify that repeated query and POST parameters remain
   repeated fields instead of collapsing into a Python list string.
 - Header tests verify that session keys containing carriage returns or newlines
@@ -123,6 +139,10 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-10-ci-baseline.md` for the GitHub Actions baseline.
 - See `docs/plans/2026-06-10-tornado-future-async.md` for the Tornado 6 async
   request compatibility fix.
+- See `docs/plans/2026-06-12-response-body-size-limit.md` for the 1 MiB
+  transport and parser response boundary.
+- See `docs/plans/2026-06-12-nonblocking-async-session-refresh.md` for the
+  non-blocking async 401 refresh and replay contract.
 
 ## Contributing
 

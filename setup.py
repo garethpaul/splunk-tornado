@@ -5,7 +5,7 @@ from pathlib import Path
 from setuptools import setup
 
 ROOT = Path(__file__).resolve().parent
-version = "0.1"
+version = "0.2.0"
 
 setup_kwargs = dict(
     name="splunktornado",
