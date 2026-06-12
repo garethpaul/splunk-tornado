@@ -116,7 +116,7 @@ class SplunkMixin(object):
     def xml_parser(self):
         return et.XMLParser(resolve_entities=False, no_network=True)
     
-    def sync_request(self, pathname, post_args=None, session_key=None, retry_on_unauthorized=True, **kwargs):
+    def sync_request(self, pathname, post_args=None, session_key=None, retry_on_unauthorized=True, request_timeout=20.0, **kwargs):
         """"
         A simplified syncronous http request method for splunk services.
         Returns a tuple based on parse_response method spec.
@@ -128,7 +128,11 @@ class SplunkMixin(object):
             max_body_size=self.max_response_body_size,
         )
         try:
-            fetch_kwargs = {"headers": headers, "raise_error": False}
+            fetch_kwargs = {
+                "headers": headers,
+                "raise_error": False,
+                "request_timeout": request_timeout,
+            }
             if post_args is not None:
                 fetch_kwargs.update({"method": "POST", "body": self.encode_args(post_args)})
             response = http.fetch(url, **fetch_kwargs)
@@ -142,6 +146,7 @@ class SplunkMixin(object):
                         pathname,
                         post_args=post_args,
                         session_key=self.session_key,
+                        request_timeout=request_timeout,
                         retry_on_unauthorized=False,
                         **kwargs
                     )

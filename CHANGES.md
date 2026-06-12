@@ -2,6 +2,8 @@
 
 ## 2026-06-12
 
+- Added a 20-second default synchronous transport timeout and preserved custom
+  timeouts across the single unauthorized retry.
 - Capped synchronous, asynchronous, retried, and streamed Splunk responses at
   1 MiB in Tornado and rejected oversized custom response bodies before parser
   dispatch, with boundary, cleanup, streaming, and mutation coverage.
