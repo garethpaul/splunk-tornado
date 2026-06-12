@@ -67,6 +67,10 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   a live Splunk instance.
 - Auth retry tests verify that unauthorized requests retry at most once after a
   session-key refresh.
+- Async 401 handling refreshes the session key through the bounded non-blocking
+  login request, then replays the original request once only after receiving a
+  safe non-empty key. Failed refreshes return the original unauthorized
+  response.
 - Async requests use Tornado 6's future-returning HTTP client API while keeping
   the mixin's existing response callback contract, including transport errors.
 - Sync, async, retried, and streamed Splunk responses are capped at 1 MiB by
@@ -135,6 +139,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   request compatibility fix.
 - See `docs/plans/2026-06-12-response-body-size-limit.md` for the 1 MiB
   transport and parser response boundary.
+- See `docs/plans/2026-06-12-nonblocking-async-session-refresh.md` for the
+  non-blocking async 401 refresh and replay contract.
 
 ## Contributing
 

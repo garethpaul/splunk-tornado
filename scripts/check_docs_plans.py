@@ -15,6 +15,7 @@ CI_PLAN = os.path.join(DOCS_PLANS, "2026-06-10-ci-baseline.md")
 PACKAGE_PLAN = os.path.join(DOCS_PLANS, "2026-06-10-package-build-matrix.md")
 ASYNC_PLAN = os.path.join(DOCS_PLANS, "2026-06-10-tornado-future-async.md")
 RESPONSE_SIZE_PLAN = os.path.join(DOCS_PLANS, "2026-06-12-response-body-size-limit.md")
+ASYNC_REFRESH_PLAN = os.path.join(DOCS_PLANS, "2026-06-12-nonblocking-async-session-refresh.md")
 CI_WORKFLOW = os.path.join(ROOT, ".github", "workflows", "check.yml")
 WORKFLOW_DIR = os.path.dirname(CI_WORKFLOW)
 
@@ -88,6 +89,8 @@ if not os.path.isfile(ASYNC_PLAN):
     failures.append("%s is missing" % rel(ASYNC_PLAN))
 if not os.path.isfile(RESPONSE_SIZE_PLAN):
     failures.append("%s is missing" % rel(RESPONSE_SIZE_PLAN))
+if not os.path.isfile(ASYNC_REFRESH_PLAN):
+    failures.append("%s is missing" % rel(ASYNC_REFRESH_PLAN))
 if not os.path.isfile(CI_WORKFLOW):
     failures.append("%s is missing" % rel(CI_WORKFLOW))
 
@@ -247,6 +250,29 @@ if "except Exception:\n            http.close()\n            raise" not in auth_
     failures.append("splunktornado/auth.py must close bounded async clients when fetch setup fails")
 if "if len(body) > self.max_response_body_size:" not in auth_source:
     failures.append("splunktornado/auth.py must reject oversized custom responses before parsing")
+if "def _request_session_key_async(self, callback):" not in auth_source:
+    failures.append("splunktornado/auth.py must provide a non-blocking session-key request")
+if '"/services/auth/login",\n            partial(self._on_async_session_key, callback)' not in auth_source:
+    failures.append("splunktornado/auth.py must use the bounded async request path for login")
+async_login_source = auth_source.split("def _request_session_key_async", 1)[1].split("def _on_async_session_key", 1)[0]
+if "retry_on_unauthorized=False" not in async_login_source:
+    failures.append("splunktornado/auth.py must not retry the async login request")
+async_response_source = auth_source.split("def _on_async_response", 1)[1].split("def _on_async_session_refresh", 1)[0]
+if "self.refresh_session_key()" in async_response_source:
+    failures.append("splunktornado/auth.py must not block the event loop with synchronous session refresh")
+if "self._request_session_key_async(partial(" not in async_response_source:
+    failures.append("splunktornado/auth.py must refresh async 401 responses through the async login helper")
+if "def _on_async_session_refresh(" not in auth_source:
+    failures.append("splunktornado/auth.py must resume the original request after async login")
+if "self.session_key = session_key\n        if not session_key:" not in auth_source:
+    failures.append("splunktornado/auth.py must clear a stale shared key when async login fails")
+if "if not session_key:\n            callback(original_response)\n            return" not in auth_source:
+    failures.append("splunktornado/auth.py must return the original 401 when async login fails")
+if "retry_on_unauthorized=False" not in auth_source.split("def _on_async_session_refresh", 1)[1]:
+    failures.append("splunktornado/auth.py must bound the replay after async login to one attempt")
+async_session_key_source = auth_source.split("def _on_async_session_key", 1)[1].split("def xml_parser", 1)[0]
+if "self.request_headers(session_key=session_key)" not in async_session_key_source:
+    failures.append("splunktornado/auth.py must validate refreshed session keys before replay")
 
 test_source = read(os.path.join(ROOT, "tests", "test_auth.py"))
 for test_name in (
@@ -255,6 +281,10 @@ for test_name in (
     "test_async_request_preserves_streaming_callback_with_body_limit",
     "test_async_request_reports_transport_failures_to_callback",
     "test_async_request_closes_client_when_fetch_raises_synchronously",
+    "test_async_request_retries_unauthorized_once",
+    "test_async_request_returns_original_unauthorized_when_refresh_fails",
+    "test_async_session_key_request_uses_bounded_login_without_retry",
+    "test_async_session_key_request_rejects_missing_or_unsafe_keys",
 ):
     if "def %s(" % test_name not in test_source:
         failures.append("tests/test_auth.py must retain %s" % test_name)
@@ -262,6 +292,8 @@ for test_name in (
 for docs_file in ("README.md", "VISION.md", "SECURITY.md", "CHANGES.md"):
     if "1 MiB" not in read(os.path.join(ROOT, docs_file)):
         failures.append("%s must document the 1 MiB response limit" % docs_file)
+    if "non-blocking" not in read(os.path.join(ROOT, docs_file)).lower():
+        failures.append("%s must document non-blocking async session refresh" % docs_file)
 
 if failures:
     print("Documentation plan checks failed:\n- %s" % "\n- ".join(failures), file=sys.stderr)

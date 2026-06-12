@@ -539,7 +539,6 @@ class SplunkMixinTests(unittest.TestCase):
 
     def test_async_request_retries_unauthorized_once(self):
         handler = DummyHandler()
-        handler.session_key = "fresh"
         handler.request = type("Request", (), {
             "connection": type("Connection", (), {
                 "stream": type("Stream", (), {"closed": lambda self: False})()
@@ -552,15 +551,22 @@ class SplunkMixinTests(unittest.TestCase):
             async_calls.append((args, kwargs))
 
         handler.async_request = async_request
-        handler.refresh_session_key = lambda: refreshes.append(True)
+        handler.refresh_session_key = lambda: self.fail("async retry must not block on sync refresh")
+        handler._request_session_key_async = lambda callback: (
+            refreshes.append(True),
+            callback("fresh"),
+        )
         callback_calls = []
+        streaming_callback = lambda chunk: None
 
         handler._on_async_response(
             "/services/search/jobs",
             lambda response, **kwargs: callback_calls.append((response, kwargs)),
             Response("text/plain", b"unauthorized", error=FakeHTTPError(401)),
+            post_args={"search": "index=main"},
+            streaming_callback=streaming_callback,
             request_timeout=9.0,
-            search="index=main",
+            output_mode="json",
         )
 
         self.assertEqual([], callback_calls)
@@ -569,9 +575,78 @@ class SplunkMixinTests(unittest.TestCase):
         args, kwargs = async_calls[0]
         self.assertEqual("/services/search/jobs", args[0])
         self.assertEqual("fresh", kwargs["session_key"])
+        self.assertEqual({"search": "index=main"}, kwargs["post_args"])
+        self.assertIs(streaming_callback, kwargs["streaming_callback"])
         self.assertEqual(9.0, kwargs["request_timeout"])
         self.assertEqual(False, kwargs["retry_on_unauthorized"])
-        self.assertEqual("index=main", kwargs["search"])
+        self.assertEqual("json", kwargs["output_mode"])
+        self.assertEqual("fresh", handler.session_key)
+
+    def test_async_request_returns_original_unauthorized_when_refresh_fails(self):
+        handler = DummyHandler()
+        handler.session_key = "stale"
+        handler.request = type("Request", (), {
+            "connection": type("Connection", (), {
+                "stream": type("Stream", (), {"closed": lambda self: False})()
+            })()
+        })()
+        original_response = Response("text/plain", b"unauthorized", error=FakeHTTPError(401))
+        callback_calls = []
+        handler.async_request = lambda *args, **kwargs: self.fail("request must not retry")
+        handler.refresh_session_key = lambda: self.fail("async retry must not block on sync refresh")
+        handler._request_session_key_async = lambda callback: callback(None)
+
+        handler._on_async_response(
+            "/services/search/jobs",
+            lambda response, **kwargs: callback_calls.append((response, kwargs)),
+            original_response,
+        )
+
+        self.assertEqual([(original_response, {})], callback_calls)
+        self.assertIsNone(handler.session_key)
+
+    def test_async_session_key_request_uses_bounded_login_without_retry(self):
+        handler = DummyHandler()
+        handler.settings = dict(
+            DummyHandler.settings,
+            splunk_username="user",
+            splunk_password="password",
+        )
+        requests = []
+        callback_calls = []
+        handler.async_request = lambda *args, **kwargs: requests.append((args, kwargs))
+
+        handler._request_session_key_async(callback_calls.append)
+
+        self.assertEqual(1, len(requests))
+        args, kwargs = requests[0]
+        self.assertEqual("/services/auth/login", args[0])
+        self.assertEqual(
+            {"username": "user", "password": "password"},
+            kwargs["post_args"],
+        )
+        self.assertEqual(False, kwargs["retry_on_unauthorized"])
+        args[1](
+            Response("text/xml", b""),
+            xml=auth_module.et.fromstring(b"<response><sessionKey>fresh</sessionKey></response>"),
+        )
+        self.assertEqual(["fresh"], callback_calls)
+
+    def test_async_session_key_request_rejects_missing_or_unsafe_keys(self):
+        handler = DummyHandler()
+        callback_calls = []
+
+        for response, xml in (
+            (Response("text/xml", b"", error=FakeHTTPError(503)), None),
+            (Response("text/xml", b""), auth_module.et.fromstring(b"<response />")),
+            (
+                Response("text/xml", b""),
+                auth_module.et.fromstring(b"<response><sessionKey>bad\nkey</sessionKey></response>"),
+            ),
+        ):
+            handler._on_async_session_key(callback_calls.append, response, xml=xml)
+
+        self.assertEqual([None, None, None], callback_calls)
 
 
 if __name__ == "__main__":

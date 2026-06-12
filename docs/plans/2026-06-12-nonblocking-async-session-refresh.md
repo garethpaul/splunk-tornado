@@ -1,6 +1,6 @@
 # Non-blocking asynchronous session refresh
 
-Status: Planned
+Status: Completed
 
 ## Goal
 
@@ -59,8 +59,14 @@ inside the async response handler.
 
 ## Verification
 
-- Focused async refresh success and failure tests.
-- Full `make check` from the repository and an external working directory.
-- Hostile mutations restoring blocking refresh, enabling login retries, or
-  retrying without a valid key must fail.
-- `git diff --check`.
+- The 27-test focused suite passed async login construction, successful replay,
+  invalid or missing key rejection, transport failure fallback, argument
+  preservation, and the no-blocking-refresh contract.
+- `make check` passed from the repository and an external working directory in
+  a clean Python 3.12 environment with all pinned requirements.
+- Wheel and source builds passed, and `pip-audit` reported no known
+  vulnerabilities.
+- Hostile mutations restoring blocking refresh, enabling login retries,
+  replaying without a valid key, or skipping key validation were rejected by
+  tests and static contracts.
+- `git diff --check` passed.

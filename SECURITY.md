@@ -41,6 +41,9 @@ Helpful reports include:
   including streamed responses, and checked again before in-memory parser
   dispatch to reduce denial-of-service risk from oversized upstream data. The
   mixin selects `SimpleAsyncHTTPClient`, whose constructor enforces that cap.
+- Async unauthorized responses use a non-blocking login request, validate the
+  returned session key, and replay at most once. Login failure returns the
+  original 401 instead of blocking the event loop or widening retry behavior.
 
 ## Service and API Notes
 

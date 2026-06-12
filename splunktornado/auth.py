@@ -82,6 +82,31 @@ class SplunkMixin(object):
             logging.info("Could not retrieve Splunk session_key")
             return None
 
+    def _request_session_key_async(self, callback):
+        """Retrieve a session key without blocking Tornado's event loop."""
+        self.require_setting("splunk_username", "Splunk Connect")
+        self.require_setting("splunk_password", "Splunk Connect")
+        post_args = {
+          "username": self.settings["splunk_username"],
+          "password": self.settings["splunk_password"],
+        }
+        self.async_request(
+            "/services/auth/login",
+            partial(self._on_async_session_key, callback),
+            post_args=post_args,
+            retry_on_unauthorized=False,
+        )
+
+    def _on_async_session_key(self, callback, response, xml=None, json=None, text=None):
+        session_key = None
+        if response.error is None and xml is not None:
+            session_key = xml.findtext("sessionKey")
+            try:
+                self.request_headers(session_key=session_key)
+            except ValueError:
+                session_key = None
+        callback(session_key)
+
     def xml_parser(self):
         return et.XMLParser(resolve_entities=False, no_network=True)
     
@@ -168,16 +193,36 @@ class SplunkMixin(object):
         else:
             if response.error:
                 if response.code == 401 and self.retry_request and retry_on_unauthorized:
-                    self.refresh_session_key()
-                    if self.session_key:
-                        logging.info("Retry request with fresh session key")
-                        self.async_request(pathname, callback, post_args=post_args, session_key=self.session_key, streaming_callback=streaming_callback, request_timeout=request_timeout, retry_on_unauthorized=False, **kwargs)
-                        return
-                    else:
-                        callback(response)
-                        return
+                    self._request_session_key_async(partial(
+                        self._on_async_session_refresh,
+                        pathname,
+                        callback,
+                        response,
+                        post_args=post_args,
+                        streaming_callback=streaming_callback,
+                        request_timeout=request_timeout,
+                        **kwargs
+                    ))
+                    return
             xml, json, text = self.parse_response(response)
             callback(response, xml=xml, json=json, text=text)    
+
+    def _on_async_session_refresh(self, pathname, callback, original_response, session_key, post_args=None, streaming_callback=None, request_timeout=20.0, **kwargs):
+        self.session_key = session_key
+        if not session_key:
+            callback(original_response)
+            return
+        logging.info("Retry request with fresh session key")
+        self.async_request(
+            pathname,
+            callback,
+            post_args=post_args,
+            session_key=session_key,
+            streaming_callback=streaming_callback,
+            request_timeout=request_timeout,
+            retry_on_unauthorized=False,
+            **kwargs
+        )
 
     def response_content_type(self, response):
         return response.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
