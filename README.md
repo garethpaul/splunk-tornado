@@ -53,14 +53,24 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 
 ## Testing and Verification
 
-- `make check` runs Python syntax checks, unit tests, and `setup.py check`.
-- GitHub Actions installs `requirements.txt` and runs `make check` through
-  `.github/workflows/check.yml` on pushes, pull requests, and manual
-  dispatches.
+- `make check` runs Python syntax checks, unit tests, a PEP 517 wheel/sdist
+  build, and dependency auditing.
+- GitHub Actions installs pinned runtime and development requirements and runs
+  `make check` on fixed Ubuntu 24.04 runners across Python 3.10, 3.12, and
+  3.14 for every push and pull request, with pinned Node 24 actions, read-only
+  permissions, credential-free checkout, and timeouts.
+- Each hosted matrix job also reruns `make check` from a temporary directory to
+  enforce path-independent Makefile behavior.
+- `make check` audits the pinned Tornado 6 and lxml 6 baseline for known
+  vulnerabilities after the offline unit and packaging checks.
 - The tests mock response objects and Tornado HTTP clients; they do not require
   a live Splunk instance.
 - Auth retry tests verify that unauthorized requests retry at most once after a
   session-key refresh.
+- Async requests use Tornado 6's future-returning HTTP client API while keeping
+  the mixin's existing response callback contract, including transport errors.
+- Version 0.2.0 is the first package baseline requiring Python 3.10+, Tornado
+  6.5.6+, and lxml 6.1.1+.
 - Request encoding tests verify that repeated query and POST parameters remain
   repeated fields instead of collapsing into a Python list string.
 - Header tests verify that session keys containing carriage returns or newlines
@@ -116,6 +126,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-09-repeated-parameter-encoding.md` for repeated
   request parameter encoding coverage.
 - See `docs/plans/2026-06-10-ci-baseline.md` for the GitHub Actions baseline.
+- See `docs/plans/2026-06-10-tornado-future-async.md` for the Tornado 6 async
+  request compatibility fix.
 
 ## Contributing
 

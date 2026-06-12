@@ -1,15 +1,11 @@
 #!/usr/bin/env python
 
-# Importing setuptools adds some features like "setup.py develop", but
-# it's optional so swallow the error if it's not there.
-try:
-    from setuptools import setup
-    HAS_SETUPTOOLS = True
-except ImportError:
-    from distutils.core import setup
-    HAS_SETUPTOOLS = False
+from pathlib import Path
 
-version = "0.1"
+from setuptools import setup
+
+ROOT = Path(__file__).resolve().parent
+version = "0.2.0"
 
 setup_kwargs = dict(
     name="splunktornado",
@@ -19,10 +15,11 @@ setup_kwargs = dict(
     author_email="spam@featureblend.com",
     url="https://github.com/garethpaul/splunk-tornado",
     download_url="https://github.com/garethpaul/splunk-tornado/archive/%s.tar.gz" % version,
-    description="Implementation of Splunk authentication scheme for Tornado"
+    description="Implementation of Splunk authentication scheme for Tornado",
+    long_description=(ROOT / "README.md").read_text(encoding="utf-8"),
+    long_description_content_type="text/markdown",
+    install_requires=["lxml>=6.1.1,<7", "tornado>=6.5.6,<7"],
+    python_requires=">=3.10",
 )
-
-if HAS_SETUPTOOLS:
-    setup_kwargs["install_requires"] = ["lxml", "tornado"]
 
 setup(**setup_kwargs)

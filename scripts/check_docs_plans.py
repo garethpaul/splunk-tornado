@@ -12,7 +12,54 @@ CANONICAL_PLAN = os.path.join(DOCS_PLANS, "2026-06-08-splunk-tornado-baseline.md
 CONTENT_DISPATCH_PLAN = os.path.join(DOCS_PLANS, "2026-06-09-exact-content-type-dispatch.md")
 REPEATED_ARGS_PLAN = os.path.join(DOCS_PLANS, "2026-06-09-repeated-parameter-encoding.md")
 CI_PLAN = os.path.join(DOCS_PLANS, "2026-06-10-ci-baseline.md")
+PACKAGE_PLAN = os.path.join(DOCS_PLANS, "2026-06-10-package-build-matrix.md")
+ASYNC_PLAN = os.path.join(DOCS_PLANS, "2026-06-10-tornado-future-async.md")
 CI_WORKFLOW = os.path.join(ROOT, ".github", "workflows", "check.yml")
+WORKFLOW_DIR = os.path.dirname(CI_WORKFLOW)
+
+EXPECTED_CI_WORKFLOW = """name: Check
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [\"3.10\", \"3.12\", \"3.14\"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run baseline
+        run: make check
+
+      - name: Verify external working directory
+        run: cd "$(mktemp -d)" && make -f "$GITHUB_WORKSPACE/Makefile" check
+"""
 
 
 def rel(path):
@@ -34,6 +81,10 @@ if not os.path.isfile(REPEATED_ARGS_PLAN):
     failures.append("%s is missing" % rel(REPEATED_ARGS_PLAN))
 if not os.path.isfile(CI_PLAN):
     failures.append("%s is missing" % rel(CI_PLAN))
+if not os.path.isfile(PACKAGE_PLAN):
+    failures.append("%s is missing" % rel(PACKAGE_PLAN))
+if not os.path.isfile(ASYNC_PLAN):
+    failures.append("%s is missing" % rel(ASYNC_PLAN))
 if not os.path.isfile(CI_WORKFLOW):
     failures.append("%s is missing" % rel(CI_WORKFLOW))
 
@@ -48,13 +99,72 @@ for plan_path in plans:
 
 if os.path.isfile(CI_WORKFLOW):
     workflow = read(CI_WORKFLOW)
-    if (
-        "uses: actions/checkout@v4" not in workflow
-        or "uses: actions/setup-python@v5" not in workflow
-        or "python -m pip install -r requirements.txt" not in workflow
-        or "run: make check" not in workflow
-    ):
-        failures.append("%s must set up Python, install requirements, and run make check" % rel(CI_WORKFLOW))
+    if workflow != EXPECTED_CI_WORKFLOW:
+        failures.append("%s must match the fail-closed hosted verification contract" % rel(CI_WORKFLOW))
+    required_workflow_phrases = (
+        "uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10",
+        "uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405",
+        "concurrency:",
+        "cancel-in-progress: true",
+        "runs-on: ubuntu-24.04",
+        'python-version: ["3.10", "3.12", "3.14"]',
+        "python-version: ${{ matrix.python-version }}",
+        "permissions:",
+        "contents: read",
+        "persist-credentials: false",
+        "timeout-minutes: 10",
+        "workflow_dispatch:",
+        "python -m pip install -r requirements.txt -r requirements-dev.txt",
+        "run: make check",
+        'run: cd "$(mktemp -d)" && make -f "$GITHUB_WORKSPACE/Makefile" check',
+    )
+    for phrase in required_workflow_phrases:
+        if phrase not in workflow:
+            failures.append("%s must contain %s" % (rel(CI_WORKFLOW), phrase))
+
+workflow_files = sorted(glob.glob(os.path.join(WORKFLOW_DIR, "*.yml")) + glob.glob(os.path.join(WORKFLOW_DIR, "*.yaml")))
+if workflow_files != [CI_WORKFLOW]:
+    failures.append(".github/workflows must contain only check.yml")
+
+requirements = read(os.path.join(ROOT, "requirements.txt"))
+requirements_dev = read(os.path.join(ROOT, "requirements-dev.txt"))
+setup_source = read(os.path.join(ROOT, "setup.py"))
+for requirement in ("lxml==6.1.1", "tornado==6.5.6"):
+    if requirement not in requirements:
+        failures.append("requirements.txt must pin %s" % requirement)
+for requirement in ("build==1.5.0", "pip-audit==2.10.0", "setuptools==82.0.1"):
+    if requirement not in requirements_dev:
+        failures.append("requirements-dev.txt must pin %s" % requirement)
+for requirement in ("lxml>=6.1.1,<7", "tornado>=6.5.6,<7"):
+    if requirement not in setup_source:
+        failures.append("setup.py must bound runtime dependency %s" % requirement)
+if 'python_requires=">=3.10"' not in setup_source:
+    failures.append("setup.py must declare the tested Python >=3.10 baseline")
+if 'version = "0.2.0"' not in setup_source:
+    failures.append("setup.py must identify the breaking compatibility baseline as version 0.2.0")
+
+package_source = read(os.path.join(ROOT, "splunktornado", "__init__.py"))
+if 'version = "0.2.0"' not in package_source or "version_info = (0, 2, 0)" not in package_source:
+    failures.append("splunktornado package version metadata must match version 0.2.0")
+
+pyproject = read(os.path.join(ROOT, "pyproject.toml"))
+for phrase in ('requires = ["setuptools==82.0.1"]', 'build-backend = "setuptools.build_meta"'):
+    if phrase not in pyproject:
+        failures.append("pyproject.toml must contain %s" % phrase)
+
+makefile = read(os.path.join(ROOT, "Makefile"))
+for phrase in (
+    "ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))",
+    '$(PYTHON) -m build --no-isolation --outdir "$(ROOT)/dist" "$(ROOT)"',
+    '"$(ROOT)/requirements.txt"',
+    '"$(ROOT)/requirements-dev.txt"',
+):
+    if phrase not in makefile:
+        failures.append("Makefile must contain %s" % phrase)
+
+manifest = read(os.path.join(ROOT, "MANIFEST.in"))
+if "include README README.md requirements.txt requirements-dev.txt" not in manifest:
+    failures.append("MANIFEST.in must include package documentation and requirement inputs")
 
 for docs_file in ("README.md", "VISION.md", "SECURITY.md", "CHANGES.md"):
     docs_path = os.path.join(ROOT, docs_file)
@@ -62,6 +172,16 @@ for docs_file in ("README.md", "VISION.md", "SECURITY.md", "CHANGES.md"):
         failures.append("%s must document the GitHub Actions baseline" % docs_file)
 
 auth_source = read(os.path.join(ROOT, "splunktornado", "auth.py"))
+if "self.async_callback(" in auth_source:
+    failures.append("splunktornado/auth.py must not use the removed Tornado async_callback helper")
+if "callback=callback" in auth_source:
+    failures.append("splunktornado/auth.py must not pass the removed callback argument to AsyncHTTPClient.fetch")
+if "future.add_done_callback(" not in auth_source:
+    failures.append("splunktornado/auth.py must dispatch async responses through the Tornado future API")
+if "except Exception as error:" not in auth_source or 'getattr(error, "response", None)' not in auth_source:
+    failures.append("splunktornado/auth.py must preserve callback delivery for async transport failures")
+if "response.error.code==401" in auth_source or "response.error.code == 401" in auth_source:
+    failures.append("splunktornado/auth.py must use the HTTP response status for unauthorized retry decisions")
 if "XMLParser(resolve_entities=False, no_network=True)" not in auth_source:
     failures.append("splunktornado/auth.py must create XMLParser with entity resolution disabled and no network access")
 if "et.fromstring(response.body)" in auth_source:

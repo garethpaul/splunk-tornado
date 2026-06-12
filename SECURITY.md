@@ -31,7 +31,12 @@ Helpful reports include:
 - Review found file, document, data, or media parsing flows; changes in those areas should receive security-focused review before merge.
 - No primary dependency manifest was detected in the repository root. If dependencies are added later, include a manifest and prefer reproducible installation instructions.
 - GitHub Actions installs checked-in requirements and runs the Python
-  `make check` baseline before review.
+  `make check` baseline across Python 3.10, 3.12, and 3.14 before review.
+- The baseline pins and audits Tornado and lxml; CI actions are pinned by
+  commit and run with read-only repository contents permission and
+  credential-free checkout on every push and pull request.
+- Async Splunk requests use Tornado 6's supported future completion path so
+  authentication retries and response callbacks execute under the pinned API.
 
 ## Service and API Notes
 

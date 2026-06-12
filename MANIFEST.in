@@ -1,2 +1,1 @@
-recursive-include demos *.py README
-
+include README README.md requirements.txt requirements-dev.txt

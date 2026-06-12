@@ -1,4 +1,5 @@
 import unittest
+from functools import partial
 import tornado.httpclient
 import splunktornado.auth as auth_module
 
@@ -26,6 +27,7 @@ class Response(object):
         self.headers = {"Content-Type": content_type}
         self.body = body
         self.error = error
+        self.code = error.code if error is not None else 200
 
 
 class FakeHTTPError(object):
@@ -48,6 +50,33 @@ class FakeHTTPClient(object):
 
     def close(self):
         self.closed = True
+
+
+class FakeFuture(object):
+    def __init__(self, response=None, error=None):
+        self.response = response
+        self.error = error
+
+    def add_done_callback(self, callback):
+        callback(self)
+
+    def result(self):
+        if self.error is not None:
+            raise self.error
+        return self.response
+
+
+class FakeAsyncHTTPClient(object):
+    instances = []
+    response = Response("text/plain", b"ok")
+
+    def __init__(self):
+        self.calls = []
+        self.instances.append(self)
+
+    def fetch(self, url, **kwargs):
+        self.calls.append((url, kwargs))
+        return FakeFuture(self.response)
 
 
 class SplunkMixinTests(unittest.TestCase):
@@ -309,6 +338,95 @@ class SplunkMixinTests(unittest.TestCase):
             {"Authorization": "Splunk stale"},
             FakeHTTPClient.instances[0].calls[0][1]["headers"],
         )
+
+    def test_async_request_uses_tornado_future_api(self):
+        handler = DummyHandler()
+        handler.request = type("Request", (), {
+            "connection": type("Connection", (), {
+                "stream": type("Stream", (), {"closed": lambda self: False})()
+            })()
+        })()
+        callback_calls = []
+        original_client = tornado.httpclient.AsyncHTTPClient
+        FakeAsyncHTTPClient.instances = []
+        tornado.httpclient.AsyncHTTPClient = FakeAsyncHTTPClient
+        try:
+            handler.async_request(
+                "/services/search/jobs",
+                lambda response, **kwargs: callback_calls.append((response, kwargs)),
+                post_args={"search": "index=main"},
+                session_key="abc123",
+                request_timeout=9.0,
+            )
+        finally:
+            tornado.httpclient.AsyncHTTPClient = original_client
+
+        self.assertEqual(1, len(FakeAsyncHTTPClient.instances))
+        request, fetch_kwargs = FakeAsyncHTTPClient.instances[0].calls[0]
+        self.assertEqual("https://splunk.example:8089/services/search/jobs", request.url)
+        self.assertEqual({"raise_error": False}, fetch_kwargs)
+        self.assertEqual("POST", request.method)
+        self.assertEqual(b"search=index%3Dmain", request.body)
+        self.assertEqual("Splunk abc123", request.headers["Authorization"])
+        self.assertEqual(9.0, request.request_timeout)
+        self.assertEqual(1, len(callback_calls))
+        self.assertEqual(b"ok", callback_calls[0][1]["text"])
+
+    def test_async_get_request_uses_no_body(self):
+        handler = DummyHandler()
+        handler.request = type("Request", (), {
+            "connection": type("Connection", (), {
+                "stream": type("Stream", (), {"closed": lambda self: False})()
+            })()
+        })()
+        callback_calls = []
+        original_client = tornado.httpclient.AsyncHTTPClient
+        FakeAsyncHTTPClient.instances = []
+        tornado.httpclient.AsyncHTTPClient = FakeAsyncHTTPClient
+        try:
+            handler.async_request(
+                "/services/search/jobs",
+                lambda response, **kwargs: callback_calls.append((response, kwargs)),
+                session_key="abc123",
+            )
+        finally:
+            tornado.httpclient.AsyncHTTPClient = original_client
+
+        request, fetch_kwargs = FakeAsyncHTTPClient.instances[0].calls[0]
+        self.assertEqual("GET", request.method)
+        self.assertIsNone(request.body)
+        self.assertEqual({"raise_error": False}, fetch_kwargs)
+        self.assertEqual(1, len(callback_calls))
+        self.assertEqual(b"ok", callback_calls[0][1]["text"])
+
+    def test_async_request_reports_transport_failures_to_callback(self):
+        handler = DummyHandler()
+        handler.request = type("Request", (), {
+            "connection": type("Connection", (), {
+                "stream": type("Stream", (), {"closed": lambda self: False})()
+            })()
+        })()
+        callback_calls = []
+        request = tornado.httpclient.HTTPRequest("https://splunk.example:8089/services/search/jobs")
+        error = ConnectionRefusedError("connection refused")
+        response_callback = partial(
+            handler._on_async_response,
+            "/services/search/jobs",
+            lambda response, **kwargs: callback_calls.append((response, kwargs)),
+        )
+
+        handler._on_async_fetch_complete(
+            response_callback,
+            request,
+            FakeFuture(error=error),
+        )
+
+        self.assertEqual(1, len(callback_calls))
+        response, kwargs = callback_calls[0]
+        self.assertEqual({"xml": None, "json": None, "text": None}, kwargs)
+        self.assertEqual(599, response.code)
+        self.assertIs(error, response.error)
+        self.assertEqual(request.url, response.effective_url)
 
     def test_async_request_retries_unauthorized_once(self):
         handler = DummyHandler()

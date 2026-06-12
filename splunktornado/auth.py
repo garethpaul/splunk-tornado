@@ -2,6 +2,7 @@
 
 import tornado.httpclient
 from tornado import escape
+from functools import partial
 import logging
 import lxml.etree as et
 
@@ -98,7 +99,7 @@ class SplunkMixin(object):
         finally:
             http.close()
         if response.error:
-            if response.error.code==401 and self.retry_request and retry_on_unauthorized:
+            if response.code == 401 and self.retry_request and retry_on_unauthorized:
                 self.refresh_session_key()
                 if self.session_key:
                     return self.sync_request(
@@ -118,12 +119,33 @@ class SplunkMixin(object):
         """
         url = self.request_url(pathname, **kwargs)
         headers = self.request_headers(session_key=session_key)
-        callback=self.async_callback(self._on_async_response, pathname, callback, post_args=post_args, session_key=session_key, streaming_callback=streaming_callback, request_timeout=request_timeout, retry_on_unauthorized=retry_on_unauthorized, **kwargs)
+        response_callback = partial(self._on_async_response, pathname, callback, post_args=post_args, session_key=session_key, streaming_callback=streaming_callback, request_timeout=request_timeout, retry_on_unauthorized=retry_on_unauthorized, **kwargs)
         http = tornado.httpclient.AsyncHTTPClient()
+        fetch_kwargs = {
+            "headers": headers,
+            "streaming_callback": streaming_callback,
+            "request_timeout": request_timeout,
+        }
         if post_args is not None:
-            http.fetch(url, method="POST", body=self.encode_args(post_args), callback=callback, headers=headers, streaming_callback=streaming_callback, request_timeout=request_timeout, raise_error=False)
-        else:
-            http.fetch(url, callback=callback, headers=headers, streaming_callback=streaming_callback, request_timeout=request_timeout, raise_error=False)
+            fetch_kwargs.update({"method": "POST", "body": self.encode_args(post_args)})
+        request = tornado.httpclient.HTTPRequest(url, **fetch_kwargs)
+        future = http.fetch(request, raise_error=False)
+        future.add_done_callback(partial(self._on_async_fetch_complete, response_callback, request))
+
+    def _on_async_fetch_complete(self, callback, request, future):
+        try:
+            response = future.result()
+        except Exception as error:
+            response = getattr(error, "response", None)
+            if response is None:
+                response = tornado.httpclient.HTTPResponse(
+                    request,
+                    getattr(error, "code", 599),
+                    effective_url=request.url,
+                    error=error,
+                    reason=str(error),
+                )
+        callback(response)
 
     def _on_async_response(self, pathname, callback, response, post_args=None, session_key=None, streaming_callback=None, request_timeout=20.0, retry_on_unauthorized=True, **kwargs):
         """Reponse handler for asynchronous requests."""
@@ -131,7 +153,7 @@ class SplunkMixin(object):
             return
         else:
             if response.error:
-                if response.error.code==401 and self.retry_request and retry_on_unauthorized:
+                if response.code == 401 and self.retry_request and retry_on_unauthorized:
                     self.refresh_session_key()
                     if self.session_key:
                         logging.info("Retry request with fresh session key")

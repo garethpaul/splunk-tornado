@@ -2,5 +2,5 @@
 
 """The Splunk auth module for Tornado"""
 
-version = "0.1"
-version_info = (0, 1, 0)
+version = "0.2.0"
+version_info = (0, 2, 0)
