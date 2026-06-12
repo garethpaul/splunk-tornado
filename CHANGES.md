@@ -1,5 +1,11 @@
 # Changes
 
+## 2026-06-12
+
+- Capped synchronous, asynchronous, retried, and streamed Splunk responses at
+  1 MiB in Tornado and rejected oversized custom response bodies before parser
+  dispatch, with boundary, cleanup, streaming, and mutation coverage.
+
 ## 2026-06-10
 
 - Bumped the package to 0.2.0 for the Python 3.10+, Tornado 6, and lxml 6

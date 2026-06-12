@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import tornado.httpclient
+from tornado.simple_httpclient import SimpleAsyncHTTPClient
 from tornado import escape
 from functools import partial
 import logging
@@ -19,6 +20,7 @@ except NameError:
 class SplunkMixin(object):
     """General splunk services connection mixin with shared authentication and lazy session key updating if stale/non-existant."""
     retry_request = True
+    max_response_body_size = 1024 * 1024
     
     def get_session_key(self):
         """Session key getter, elegantly retrieves from application global attributes."""
@@ -90,7 +92,10 @@ class SplunkMixin(object):
         """
         url = self.request_url(pathname, **kwargs)
         headers = self.request_headers(session_key=session_key)
-        http = tornado.httpclient.HTTPClient()
+        http = tornado.httpclient.HTTPClient(
+            async_client_class=SimpleAsyncHTTPClient,
+            max_body_size=self.max_response_body_size,
+        )
         try:
             fetch_kwargs = {"headers": headers, "raise_error": False}
             if post_args is not None:
@@ -120,7 +125,10 @@ class SplunkMixin(object):
         url = self.request_url(pathname, **kwargs)
         headers = self.request_headers(session_key=session_key)
         response_callback = partial(self._on_async_response, pathname, callback, post_args=post_args, session_key=session_key, streaming_callback=streaming_callback, request_timeout=request_timeout, retry_on_unauthorized=retry_on_unauthorized, **kwargs)
-        http = tornado.httpclient.AsyncHTTPClient()
+        http = SimpleAsyncHTTPClient(
+            force_instance=True,
+            max_body_size=self.max_response_body_size,
+        )
         fetch_kwargs = {
             "headers": headers,
             "streaming_callback": streaming_callback,
@@ -129,10 +137,14 @@ class SplunkMixin(object):
         if post_args is not None:
             fetch_kwargs.update({"method": "POST", "body": self.encode_args(post_args)})
         request = tornado.httpclient.HTTPRequest(url, **fetch_kwargs)
-        future = http.fetch(request, raise_error=False)
-        future.add_done_callback(partial(self._on_async_fetch_complete, response_callback, request))
+        try:
+            future = http.fetch(request, raise_error=False)
+        except Exception:
+            http.close()
+            raise
+        future.add_done_callback(partial(self._on_async_fetch_complete, response_callback, request, http))
 
-    def _on_async_fetch_complete(self, callback, request, future):
+    def _on_async_fetch_complete(self, callback, request, http, future):
         try:
             response = future.result()
         except Exception as error:
@@ -145,6 +157,8 @@ class SplunkMixin(object):
                     error=error,
                     reason=str(error),
                 )
+        finally:
+            http.close()
         callback(response)
 
     def _on_async_response(self, pathname, callback, response, post_args=None, session_key=None, streaming_callback=None, request_timeout=20.0, retry_on_unauthorized=True, **kwargs):
@@ -173,6 +187,11 @@ class SplunkMixin(object):
         General splunk http response parser based on reponse content-type.
         Returns a tuple xml, json and text where xml, json and text are None type if not serializable from response/content-type.
         """
+        body = response.body or b""
+        if len(body) > self.max_response_body_size:
+            logging.warning("Splunk response body exceeded the configured limit")
+            return None, None, None
+
         content = self.response_content_type(response)
         if content in ("text/xml", "application/xml"):
             try:

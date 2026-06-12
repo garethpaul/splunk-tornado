@@ -27,6 +27,7 @@ Priority:
 - Dispatch parsers by exact response media type, not substring matches
 - Keep parser exception handling narrow and observable
 - Keep asynchronous requests compatible with Tornado's supported future API
+- Bound buffered and streamed Splunk responses to 1 MiB before parser dispatch
 - Keep completed maintenance plans under `docs/plans`
 - Keep GitHub Actions running package builds, tests, and audits across the
   supported Python matrix on every push and pull request before review
@@ -62,6 +63,7 @@ all upstream request paths explicit.
 
 - Credential or session-key logging
 - Unbounded retries
+- Unbounded upstream response bodies
 - XML parsing that can resolve external entities or use network access
 - Bare parser exception handlers that can hide unrelated failures
 - Hidden proxying to arbitrary Splunk paths

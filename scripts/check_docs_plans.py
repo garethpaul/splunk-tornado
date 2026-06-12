@@ -14,6 +14,7 @@ REPEATED_ARGS_PLAN = os.path.join(DOCS_PLANS, "2026-06-09-repeated-parameter-enc
 CI_PLAN = os.path.join(DOCS_PLANS, "2026-06-10-ci-baseline.md")
 PACKAGE_PLAN = os.path.join(DOCS_PLANS, "2026-06-10-package-build-matrix.md")
 ASYNC_PLAN = os.path.join(DOCS_PLANS, "2026-06-10-tornado-future-async.md")
+RESPONSE_SIZE_PLAN = os.path.join(DOCS_PLANS, "2026-06-12-response-body-size-limit.md")
 CI_WORKFLOW = os.path.join(ROOT, ".github", "workflows", "check.yml")
 WORKFLOW_DIR = os.path.dirname(CI_WORKFLOW)
 
@@ -85,6 +86,8 @@ if not os.path.isfile(PACKAGE_PLAN):
     failures.append("%s is missing" % rel(PACKAGE_PLAN))
 if not os.path.isfile(ASYNC_PLAN):
     failures.append("%s is missing" % rel(ASYNC_PLAN))
+if not os.path.isfile(RESPONSE_SIZE_PLAN):
+    failures.append("%s is missing" % rel(RESPONSE_SIZE_PLAN))
 if not os.path.isfile(CI_WORKFLOW):
     failures.append("%s is missing" % rel(CI_WORKFLOW))
 
@@ -224,6 +227,41 @@ if "self.encode_args(kwargs)" not in auth_source:
     failures.append("splunktornado/auth.py must use shared encoding for query parameters")
 if "self.encode_args(post_args)" not in auth_source:
     failures.append("splunktornado/auth.py must use shared encoding for POST parameters")
+if "max_response_body_size = 1024 * 1024" not in auth_source:
+    failures.append("splunktornado/auth.py must retain the 1 MiB response body policy")
+if auth_source.count("max_body_size=self.max_response_body_size") != 2:
+    failures.append("splunktornado/auth.py must apply the response limit to sync and async clients")
+if "from tornado.simple_httpclient import SimpleAsyncHTTPClient" not in auth_source:
+    failures.append("splunktornado/auth.py must use the Tornado client implementation that enforces max_body_size")
+if "async_client_class=SimpleAsyncHTTPClient" not in auth_source:
+    failures.append("splunktornado/auth.py must bound the synchronous client's selected implementation")
+if "http = SimpleAsyncHTTPClient(" not in auth_source:
+    failures.append("splunktornado/auth.py must bound asynchronous requests with SimpleAsyncHTTPClient")
+if "force_instance=True" not in auth_source:
+    failures.append("splunktornado/auth.py must isolate bounded async HTTP clients")
+if "def _on_async_fetch_complete(self, callback, request, http, future):" not in auth_source:
+    failures.append("splunktornado/auth.py must retain async client ownership through future completion")
+if "finally:\n            http.close()\n        callback(response)" not in auth_source:
+    failures.append("splunktornado/auth.py must close bounded async clients before callback delivery")
+if "except Exception:\n            http.close()\n            raise" not in auth_source:
+    failures.append("splunktornado/auth.py must close bounded async clients when fetch setup fails")
+if "if len(body) > self.max_response_body_size:" not in auth_source:
+    failures.append("splunktornado/auth.py must reject oversized custom responses before parsing")
+
+test_source = read(os.path.join(ROOT, "tests", "test_auth.py"))
+for test_name in (
+    "test_parse_response_accepts_body_at_limit",
+    "test_parse_response_rejects_oversized_supported_content_types",
+    "test_async_request_preserves_streaming_callback_with_body_limit",
+    "test_async_request_reports_transport_failures_to_callback",
+    "test_async_request_closes_client_when_fetch_raises_synchronously",
+):
+    if "def %s(" % test_name not in test_source:
+        failures.append("tests/test_auth.py must retain %s" % test_name)
+
+for docs_file in ("README.md", "VISION.md", "SECURITY.md", "CHANGES.md"):
+    if "1 MiB" not in read(os.path.join(ROOT, docs_file)):
+        failures.append("%s must document the 1 MiB response limit" % docs_file)
 
 if failures:
     print("Documentation plan checks failed:\n- %s" % "\n- ".join(failures), file=sys.stderr)

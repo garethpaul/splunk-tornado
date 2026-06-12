@@ -1,6 +1,6 @@
 # Splunk response body size limit
 
-Status: Planned
+Status: Completed
 
 ## Goal
 
@@ -57,11 +57,17 @@ plan evidence.
 
 ## Verification
 
-- Focused response-limit and retry tests.
-- Full `make check` from the repository and an external working directory.
-- Hostile mutations removing the transport cap, parser guard, retry
-  propagation, or async client cleanup must fail.
-- `git diff --check`.
+- Focused response-limit, streaming, transport-failure, and retry coverage
+  passed in the 24-test authentication suite.
+- `make check` passed from the repository and an external working directory in
+  a clean Python 3.12 environment with all pinned requirements.
+- Wheel and source builds passed, and `pip-audit` reported no known
+  vulnerabilities.
+- A localhost Tornado probe confirmed sync and async transports reject a body
+  above the configured limit with HTTP 599.
+- Hostile mutations removing the policy value, async transport cap, parser
+  guard, or async client cleanup were rejected by tests and static contracts.
+- `git diff --check` passed.
 
 ## Sources
 

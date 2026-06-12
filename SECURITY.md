@@ -37,6 +37,10 @@ Helpful reports include:
   credential-free checkout on every push and pull request.
 - Async Splunk requests use Tornado 6's supported future completion path so
   authentication retries and response callbacks execute under the pinned API.
+- Splunk response bodies are limited to 1 MiB at the Tornado transport layer,
+  including streamed responses, and checked again before in-memory parser
+  dispatch to reduce denial-of-service risk from oversized upstream data. The
+  mixin selects `SimpleAsyncHTTPClient`, whose constructor enforces that cap.
 
 ## Service and API Notes
 

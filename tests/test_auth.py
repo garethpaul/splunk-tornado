@@ -39,9 +39,10 @@ class FakeHTTPClient(object):
     instances = []
     response = Response("text/plain", b"ok")
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.calls = []
         self.closed = False
+        self.kwargs = kwargs
         self.instances.append(self)
 
     def fetch(self, url, **kwargs):
@@ -69,14 +70,22 @@ class FakeFuture(object):
 class FakeAsyncHTTPClient(object):
     instances = []
     response = Response("text/plain", b"ok")
+    fetch_error = None
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.calls = []
+        self.closed = False
+        self.kwargs = kwargs
         self.instances.append(self)
 
     def fetch(self, url, **kwargs):
         self.calls.append((url, kwargs))
+        if self.fetch_error is not None:
+            raise self.fetch_error
         return FakeFuture(self.response)
+
+    def close(self):
+        self.closed = True
 
 
 class SplunkMixinTests(unittest.TestCase):
@@ -88,6 +97,31 @@ class SplunkMixinTests(unittest.TestCase):
         self.assertIsNone(xml)
         self.assertEqual({"ok": True}, payload)
         self.assertIsNone(text)
+
+    def test_parse_response_accepts_body_at_limit(self):
+        handler = SplunkMixin()
+        handler.max_response_body_size = 2
+
+        xml, payload, text = handler.parse_response(Response("text/plain", b"ok"))
+
+        self.assertIsNone(xml)
+        self.assertIsNone(payload)
+        self.assertEqual(b"ok", text)
+
+    def test_parse_response_rejects_oversized_supported_content_types(self):
+        handler = SplunkMixin()
+        handler.max_response_body_size = 2
+
+        for content_type, body in (
+            ("text/xml", b"<x>"),
+            ("application/json", b"{} "),
+            ("text/plain", b"abc"),
+        ):
+            with self.subTest(content_type=content_type):
+                self.assertEqual(
+                    (None, None, None),
+                    handler.parse_response(Response(content_type, body)),
+                )
 
     def test_parse_response_normalizes_json_content_type(self):
         response = Response("Application/JSON; charset=utf-8", b'{"ok": true}')
@@ -238,6 +272,13 @@ class SplunkMixinTests(unittest.TestCase):
         self.assertEqual(1, len(FakeHTTPClient.instances))
         client = FakeHTTPClient.instances[0]
         self.assertTrue(client.closed)
+        self.assertEqual(
+            {
+                "async_client_class": auth_module.SimpleAsyncHTTPClient,
+                "max_body_size": handler.max_response_body_size,
+            },
+            client.kwargs,
+        )
         self.assertEqual(1, len(client.calls))
         url, kwargs = client.calls[0]
         self.assertEqual("https://splunk.example:8089/services/search/jobs", url)
@@ -296,6 +337,16 @@ class SplunkMixinTests(unittest.TestCase):
         self.assertEqual([True], refreshes)
         self.assertEqual(2, len(FakeHTTPClient.instances))
         self.assertEqual(
+            [
+                {"max_body_size": handler.max_response_body_size},
+                {"max_body_size": handler.max_response_body_size},
+            ],
+            [
+                {"max_body_size": client.kwargs["max_body_size"]}
+                for client in FakeHTTPClient.instances
+            ],
+        )
+        self.assertEqual(
             {"Authorization": "Splunk stale"},
             FakeHTTPClient.instances[0].calls[0][1]["headers"],
         )
@@ -347,9 +398,9 @@ class SplunkMixinTests(unittest.TestCase):
             })()
         })()
         callback_calls = []
-        original_client = tornado.httpclient.AsyncHTTPClient
+        original_client = auth_module.SimpleAsyncHTTPClient
         FakeAsyncHTTPClient.instances = []
-        tornado.httpclient.AsyncHTTPClient = FakeAsyncHTTPClient
+        auth_module.SimpleAsyncHTTPClient = FakeAsyncHTTPClient
         try:
             handler.async_request(
                 "/services/search/jobs",
@@ -359,10 +410,19 @@ class SplunkMixinTests(unittest.TestCase):
                 request_timeout=9.0,
             )
         finally:
-            tornado.httpclient.AsyncHTTPClient = original_client
+            auth_module.SimpleAsyncHTTPClient = original_client
 
         self.assertEqual(1, len(FakeAsyncHTTPClient.instances))
-        request, fetch_kwargs = FakeAsyncHTTPClient.instances[0].calls[0]
+        client = FakeAsyncHTTPClient.instances[0]
+        request, fetch_kwargs = client.calls[0]
+        self.assertEqual(
+            {
+                "force_instance": True,
+                "max_body_size": handler.max_response_body_size,
+            },
+            client.kwargs,
+        )
+        self.assertTrue(client.closed)
         self.assertEqual("https://splunk.example:8089/services/search/jobs", request.url)
         self.assertEqual({"raise_error": False}, fetch_kwargs)
         self.assertEqual("POST", request.method)
@@ -380,9 +440,9 @@ class SplunkMixinTests(unittest.TestCase):
             })()
         })()
         callback_calls = []
-        original_client = tornado.httpclient.AsyncHTTPClient
+        original_client = auth_module.SimpleAsyncHTTPClient
         FakeAsyncHTTPClient.instances = []
-        tornado.httpclient.AsyncHTTPClient = FakeAsyncHTTPClient
+        auth_module.SimpleAsyncHTTPClient = FakeAsyncHTTPClient
         try:
             handler.async_request(
                 "/services/search/jobs",
@@ -390,7 +450,7 @@ class SplunkMixinTests(unittest.TestCase):
                 session_key="abc123",
             )
         finally:
-            tornado.httpclient.AsyncHTTPClient = original_client
+            auth_module.SimpleAsyncHTTPClient = original_client
 
         request, fetch_kwargs = FakeAsyncHTTPClient.instances[0].calls[0]
         self.assertEqual("GET", request.method)
@@ -398,6 +458,36 @@ class SplunkMixinTests(unittest.TestCase):
         self.assertEqual({"raise_error": False}, fetch_kwargs)
         self.assertEqual(1, len(callback_calls))
         self.assertEqual(b"ok", callback_calls[0][1]["text"])
+
+    def test_async_request_preserves_streaming_callback_with_body_limit(self):
+        handler = DummyHandler()
+        handler.request = type("Request", (), {
+            "connection": type("Connection", (), {
+                "stream": type("Stream", (), {"closed": lambda self: False})()
+            })()
+        })()
+        chunks = []
+        def on_chunk(chunk):
+            chunks.append(chunk)
+
+        original_client = auth_module.SimpleAsyncHTTPClient
+        FakeAsyncHTTPClient.instances = []
+        auth_module.SimpleAsyncHTTPClient = FakeAsyncHTTPClient
+        try:
+            handler.async_request(
+                "/services/search/jobs",
+                lambda response, **kwargs: None,
+                streaming_callback=on_chunk,
+            )
+        finally:
+            auth_module.SimpleAsyncHTTPClient = original_client
+
+        client = FakeAsyncHTTPClient.instances[0]
+        request = client.calls[0][0]
+        request.streaming_callback(b"chunk")
+        self.assertEqual([b"chunk"], chunks)
+        self.assertEqual(handler.max_response_body_size, client.kwargs["max_body_size"])
+        self.assertTrue(client.closed)
 
     def test_async_request_reports_transport_failures_to_callback(self):
         handler = DummyHandler()
@@ -415,9 +505,11 @@ class SplunkMixinTests(unittest.TestCase):
             lambda response, **kwargs: callback_calls.append((response, kwargs)),
         )
 
+        client = FakeAsyncHTTPClient()
         handler._on_async_fetch_complete(
             response_callback,
             request,
+            client,
             FakeFuture(error=error),
         )
 
@@ -427,6 +519,23 @@ class SplunkMixinTests(unittest.TestCase):
         self.assertEqual(599, response.code)
         self.assertIs(error, response.error)
         self.assertEqual(request.url, response.effective_url)
+        self.assertTrue(client.closed)
+
+    def test_async_request_closes_client_when_fetch_raises_synchronously(self):
+        handler = DummyHandler()
+        original_client = auth_module.SimpleAsyncHTTPClient
+        FakeAsyncHTTPClient.instances = []
+        FakeAsyncHTTPClient.fetch_error = RuntimeError("fetch failed")
+        auth_module.SimpleAsyncHTTPClient = FakeAsyncHTTPClient
+        try:
+            with self.assertRaisesRegex(RuntimeError, "fetch failed"):
+                handler.async_request("/services/search/jobs", lambda response: None)
+        finally:
+            auth_module.SimpleAsyncHTTPClient = original_client
+            FakeAsyncHTTPClient.fetch_error = None
+
+        self.assertEqual(1, len(FakeAsyncHTTPClient.instances))
+        self.assertTrue(FakeAsyncHTTPClient.instances[0].closed)
 
     def test_async_request_retries_unauthorized_once(self):
         handler = DummyHandler()

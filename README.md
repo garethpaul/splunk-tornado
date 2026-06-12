@@ -69,6 +69,11 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   session-key refresh.
 - Async requests use Tornado 6's future-returning HTTP client API while keeping
   the mixin's existing response callback contract, including transport errors.
+- Sync, async, retried, and streamed Splunk responses are capped at 1 MiB by
+  Tornado's `SimpleAsyncHTTPClient` before parsing; custom response objects
+  receive the same defensive parser check. The bounded mixin does not use a
+  globally configured curl client because Tornado's curl implementation has no
+  equivalent `max_body_size` constructor policy.
 - Version 0.2.0 is the first package baseline requiring Python 3.10+, Tornado
   6.5.6+, and lxml 6.1.1+.
 - Request encoding tests verify that repeated query and POST parameters remain
@@ -128,6 +133,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-10-ci-baseline.md` for the GitHub Actions baseline.
 - See `docs/plans/2026-06-10-tornado-future-async.md` for the Tornado 6 async
   request compatibility fix.
+- See `docs/plans/2026-06-12-response-body-size-limit.md` for the 1 MiB
+  transport and parser response boundary.
 
 ## Contributing
 
