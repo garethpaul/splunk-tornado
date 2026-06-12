@@ -271,8 +271,16 @@ if "if not session_key:\n            callback(original_response)\n            re
 if "retry_on_unauthorized=False" not in auth_source.split("def _on_async_session_refresh", 1)[1]:
     failures.append("splunktornado/auth.py must bound the replay after async login to one attempt")
 async_session_key_source = auth_source.split("def _on_async_session_key", 1)[1].split("def xml_parser", 1)[0]
+if "def _session_key_from_xml(self, xml):" not in auth_source:
+    failures.append("splunktornado/auth.py must centralize login session-key validation")
+if auth_source.count("self._session_key_from_xml(xml) if response.error is None else None") != 2:
+    failures.append("splunktornado/auth.py must validate both sync and async login responses")
+if "if not session_key:\n            return None" not in async_session_key_source:
+    failures.append("splunktornado/auth.py must reject missing login session keys")
 if "self.request_headers(session_key=session_key)" not in async_session_key_source:
-    failures.append("splunktornado/auth.py must validate refreshed session keys before replay")
+    failures.append("splunktornado/auth.py must validate login keys through the header boundary")
+if 'return xml.findtext("sessionKey")' in auth_source:
+    failures.append("splunktornado/auth.py must not return unvalidated login session keys")
 
 test_source = read(os.path.join(ROOT, "tests", "test_auth.py"))
 for test_name in (
@@ -285,6 +293,8 @@ for test_name in (
     "test_async_request_returns_original_unauthorized_when_refresh_fails",
     "test_async_session_key_request_uses_bounded_login_without_retry",
     "test_async_session_key_request_rejects_missing_or_unsafe_keys",
+    "test_request_session_key_accepts_safe_login_key",
+    "test_request_session_key_rejects_missing_or_unsafe_login_keys",
 ):
     if "def %s(" % test_name not in test_source:
         failures.append("tests/test_auth.py must retain %s" % test_name)

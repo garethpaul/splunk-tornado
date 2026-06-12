@@ -71,6 +71,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   login request, then replays the original request once only after receiving a
   safe non-empty key. Failed refreshes return the original unauthorized
   response.
+- Sync and async login responses share one validator that rejects missing or
+  CR/LF-bearing session keys before storing or replaying them.
 - Async requests use Tornado 6's future-returning HTTP client API while keeping
   the mixin's existing response callback contract, including transport errors.
 - Sync, async, retried, and streamed Splunk responses are capped at 1 MiB by

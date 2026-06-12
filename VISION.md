@@ -28,6 +28,7 @@ Priority:
 - Keep parser exception handling narrow and observable
 - Keep asynchronous requests compatible with Tornado's supported future API
 - Keep async session refresh non-blocking and bounded to one replay
+- Validate every login-provided session key before refresh state changes
 - Bound buffered and streamed Splunk responses to 1 MiB before parser dispatch
 - Keep completed maintenance plans under `docs/plans`
 - Keep GitHub Actions running package builds, tests, and audits across the

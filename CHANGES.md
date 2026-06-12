@@ -8,6 +8,8 @@
 - Replaced blocking session refresh in the async 401 path with a non-blocking
   bounded login request that replays once only after a safe session key and
   otherwise returns the original unauthorized response.
+- Centralized sync and async login response validation so missing or unsafe
+  server-provided session keys are rejected before refresh state changes.
 
 ## 2026-06-10
 

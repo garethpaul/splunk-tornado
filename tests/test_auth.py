@@ -249,6 +249,51 @@ class SplunkMixinTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             handler.request_headers(session_key=object())
 
+    def test_request_session_key_accepts_safe_login_key(self):
+        handler = DummyHandler()
+        handler.settings = dict(
+            DummyHandler.settings,
+            splunk_username="user",
+            splunk_password="password",
+        )
+        calls = []
+
+        def sync_request(*args, **kwargs):
+            calls.append((args, kwargs))
+            xml = auth_module.et.fromstring(
+                b"<response><sessionKey>fresh</sessionKey></response>"
+            )
+            return Response("text/xml", b""), xml, None, None
+
+        handler.sync_request = sync_request
+
+        self.assertEqual("fresh", handler.request_session_key())
+        self.assertEqual("/services/auth/login", calls[0][0][0])
+        self.assertEqual(False, calls[0][1]["retry_on_unauthorized"])
+
+    def test_request_session_key_rejects_missing_or_unsafe_login_keys(self):
+        handler = DummyHandler()
+        handler.settings = dict(
+            DummyHandler.settings,
+            splunk_username="user",
+            splunk_password="password",
+        )
+
+        for xml in (
+            auth_module.et.fromstring(b"<response />"),
+            auth_module.et.fromstring(
+                b"<response><sessionKey>bad\nkey</sessionKey></response>"
+            ),
+        ):
+            with self.subTest(xml=auth_module.et.tostring(xml)):
+                handler.sync_request = lambda *args, **kwargs: (
+                    Response("text/xml", b""),
+                    xml,
+                    None,
+                    None,
+                )
+                self.assertIsNone(handler.request_session_key())
+
     def test_sync_request_preserves_error_responses_and_closes_client(self):
         handler = DummyHandler()
         original_client = tornado.httpclient.HTTPClient

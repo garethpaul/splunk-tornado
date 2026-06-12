@@ -75,12 +75,12 @@ class SplunkMixin(object):
             post_args=post_args,
             retry_on_unauthorized=False,
         )
-        if response.error is None and xml is not None:
+        session_key = self._session_key_from_xml(xml) if response.error is None else None
+        if session_key:
             logging.info("Successfully retrieved Splunk session_key")
-            return xml.findtext("sessionKey")
-        else:
-            logging.info("Could not retrieve Splunk session_key")
-            return None
+            return session_key
+        logging.info("Could not retrieve Splunk session_key")
+        return None
 
     def _request_session_key_async(self, callback):
         """Retrieve a session key without blocking Tornado's event loop."""
@@ -98,14 +98,20 @@ class SplunkMixin(object):
         )
 
     def _on_async_session_key(self, callback, response, xml=None, json=None, text=None):
-        session_key = None
-        if response.error is None and xml is not None:
-            session_key = xml.findtext("sessionKey")
-            try:
-                self.request_headers(session_key=session_key)
-            except ValueError:
-                session_key = None
+        session_key = self._session_key_from_xml(xml) if response.error is None else None
         callback(session_key)
+
+    def _session_key_from_xml(self, xml):
+        if xml is None:
+            return None
+        session_key = xml.findtext("sessionKey")
+        if not session_key:
+            return None
+        try:
+            self.request_headers(session_key=session_key)
+        except ValueError:
+            return None
+        return session_key
 
     def xml_parser(self):
         return et.XMLParser(resolve_entities=False, no_network=True)

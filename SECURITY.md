@@ -44,6 +44,8 @@ Helpful reports include:
 - Async unauthorized responses use a non-blocking login request, validate the
   returned session key, and replay at most once. Login failure returns the
   original 401 instead of blocking the event loop or widening retry behavior.
+- Synchronous and asynchronous login keys pass through the same Authorization
+  header validation before refresh updates shared authentication state.
 
 ## Service and API Notes
 
