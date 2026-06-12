@@ -328,6 +328,7 @@ class SplunkMixinTests(unittest.TestCase):
         url, kwargs = client.calls[0]
         self.assertEqual("https://splunk.example:8089/services/search/jobs", url)
         self.assertEqual(False, kwargs["raise_error"])
+        self.assertEqual(20.0, kwargs["request_timeout"])
         self.assertEqual("POST", kwargs["method"])
         self.assertEqual("search=index%3Dmain", kwargs["body"])
         self.assertEqual({"Authorization": "Splunk abc123"}, kwargs["headers"])
@@ -351,6 +352,37 @@ class SplunkMixinTests(unittest.TestCase):
         body = FakeHTTPClient.instances[0].calls[0][1]["body"]
         self.assertEqual(["host", "source"], parse_qs(body)["f"])
 
+    def test_sync_request_preserves_positional_retry_control_and_default_timeout(self):
+        handler = DummyHandler()
+        original_client = tornado.httpclient.HTTPClient
+        FakeHTTPClient.instances = []
+        FakeHTTPClient.response = Response("text/plain", b"unauthorized", error=FakeHTTPError(401))
+        tornado.httpclient.HTTPClient = FakeHTTPClient
+        handler.refresh_session_key = lambda: self.fail("disabled positional retry must be preserved")
+        try:
+            handler.sync_request("/services/search/jobs", None, None, False)
+        finally:
+            tornado.httpclient.HTTPClient = original_client
+            FakeHTTPClient.response = Response("text/plain", b"ok")
+
+        self.assertEqual(1, len(FakeHTTPClient.instances))
+        self.assertEqual(20.0, FakeHTTPClient.instances[0].calls[0][1]["request_timeout"])
+
+    def test_request_session_key_uses_default_sync_timeout(self):
+        handler = DummyHandler()
+        handler.settings = dict(handler.settings, splunk_username="user", splunk_password="password")
+        original_client = tornado.httpclient.HTTPClient
+        FakeHTTPClient.instances = []
+        FakeHTTPClient.response = Response("text/xml", b"<response><sessionKey>fresh</sessionKey></response>")
+        tornado.httpclient.HTTPClient = FakeHTTPClient
+        try:
+            self.assertEqual("fresh", handler.request_session_key())
+        finally:
+            tornado.httpclient.HTTPClient = original_client
+            FakeHTTPClient.response = Response("text/plain", b"ok")
+
+        self.assertEqual(20.0, FakeHTTPClient.instances[0].calls[0][1]["request_timeout"])
+
     def test_sync_request_retries_unauthorized_once(self):
         handler = DummyHandler()
         handler.session_key = "stale"
@@ -370,6 +402,7 @@ class SplunkMixinTests(unittest.TestCase):
             response, xml, payload, text = handler.sync_request(
                 "/services/search/jobs",
                 session_key=handler.session_key,
+                request_timeout=9.0,
             )
         finally:
             tornado.httpclient.HTTPClient = original_client
@@ -398,6 +431,10 @@ class SplunkMixinTests(unittest.TestCase):
         self.assertEqual(
             {"Authorization": "Splunk fresh"},
             FakeHTTPClient.instances[1].calls[0][1]["headers"],
+        )
+        self.assertEqual(
+            [9.0, 9.0],
+            [client.calls[0][1]["request_timeout"] for client in FakeHTTPClient.instances],
         )
 
     def test_sync_request_does_not_retry_without_refreshed_session_key(self):

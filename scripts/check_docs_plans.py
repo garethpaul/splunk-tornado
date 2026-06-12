@@ -234,6 +234,13 @@ if "max_response_body_size = 1024 * 1024" not in auth_source:
     failures.append("splunktornado/auth.py must retain the 1 MiB response body policy")
 if auth_source.count("max_body_size=self.max_response_body_size") != 2:
     failures.append("splunktornado/auth.py must apply the response limit to sync and async clients")
+sync_request_source = auth_source.split("    def sync_request", 1)[1].split("    def async_request", 1)[0]
+if "def sync_request(self, pathname, post_args=None, session_key=None, retry_on_unauthorized=True, request_timeout=20.0, **kwargs):" not in auth_source:
+    failures.append("splunktornado/auth.py must expose a bounded default synchronous request timeout")
+if '"request_timeout": request_timeout' not in sync_request_source:
+    failures.append("splunktornado/auth.py must pass the synchronous timeout to Tornado")
+if "session_key=self.session_key,\n                        request_timeout=request_timeout,\n                        retry_on_unauthorized=False" not in sync_request_source:
+    failures.append("splunktornado/auth.py must preserve the synchronous timeout across unauthorized retry")
 if "from tornado.simple_httpclient import SimpleAsyncHTTPClient" not in auth_source:
     failures.append("splunktornado/auth.py must use the Tornado client implementation that enforces max_body_size")
 if "async_client_class=SimpleAsyncHTTPClient" not in auth_source:
@@ -295,6 +302,9 @@ for test_name in (
     "test_async_session_key_request_rejects_missing_or_unsafe_keys",
     "test_request_session_key_accepts_safe_login_key",
     "test_request_session_key_rejects_missing_or_unsafe_login_keys",
+    "test_request_session_key_uses_default_sync_timeout",
+    "test_sync_request_preserves_positional_retry_control_and_default_timeout",
+    "test_sync_request_retries_unauthorized_once",
 ):
     if "def %s(" % test_name not in test_source:
         failures.append("tests/test_auth.py must retain %s" % test_name)
@@ -304,6 +314,10 @@ for docs_file in ("README.md", "VISION.md", "SECURITY.md", "CHANGES.md"):
         failures.append("%s must document the 1 MiB response limit" % docs_file)
     if "non-blocking" not in read(os.path.join(ROOT, docs_file)).lower():
         failures.append("%s must document non-blocking async session refresh" % docs_file)
+
+for docs_file in ("README.md", "SECURITY.md", "CHANGES.md"):
+    if "20-second" not in read(os.path.join(ROOT, docs_file)):
+        failures.append("%s must document the synchronous request timeout" % docs_file)
 
 if failures:
     print("Documentation plan checks failed:\n- %s" % "\n- ".join(failures), file=sys.stderr)
