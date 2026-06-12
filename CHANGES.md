@@ -1,5 +1,13 @@
 # Changes
 
+## 2026-06-10
+
+- Added a GitHub Actions check workflow that installs checked-in requirements
+  and runs the existing Python `make check` baseline on pushes, pull requests,
+  and manual dispatches.
+- Added a docs/source guard requiring the CI workflow and completed CI baseline
+  plan to remain checked in.
+
 ## 2026-06-09
 
 - Rejected non-text session-key values before constructing Splunk Authorization

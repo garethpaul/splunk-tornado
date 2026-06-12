@@ -54,6 +54,9 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 ## Testing and Verification
 
 - `make check` runs Python syntax checks, unit tests, and `setup.py check`.
+- GitHub Actions installs `requirements.txt` and runs `make check` through
+  `.github/workflows/check.yml` on pushes, pull requests, and manual
+  dispatches.
 - The tests mock response objects and Tornado HTTP clients; they do not require
   a live Splunk instance.
 - Auth retry tests verify that unauthorized requests retry at most once after a
@@ -112,6 +115,7 @@ When the required SDK or runtime is unavailable, use static checks and source re
   type parser dispatch coverage.
 - See `docs/plans/2026-06-09-repeated-parameter-encoding.md` for repeated
   request parameter encoding coverage.
+- See `docs/plans/2026-06-10-ci-baseline.md` for the GitHub Actions baseline.
 
 ## Contributing
 

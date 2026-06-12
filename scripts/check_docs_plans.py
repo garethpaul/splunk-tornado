@@ -11,6 +11,8 @@ DOCS_PLANS = os.path.join(ROOT, "docs", "plans")
 CANONICAL_PLAN = os.path.join(DOCS_PLANS, "2026-06-08-splunk-tornado-baseline.md")
 CONTENT_DISPATCH_PLAN = os.path.join(DOCS_PLANS, "2026-06-09-exact-content-type-dispatch.md")
 REPEATED_ARGS_PLAN = os.path.join(DOCS_PLANS, "2026-06-09-repeated-parameter-encoding.md")
+CI_PLAN = os.path.join(DOCS_PLANS, "2026-06-10-ci-baseline.md")
+CI_WORKFLOW = os.path.join(ROOT, ".github", "workflows", "check.yml")
 
 
 def rel(path):
@@ -30,6 +32,10 @@ if not os.path.isfile(CONTENT_DISPATCH_PLAN):
     failures.append("%s is missing" % rel(CONTENT_DISPATCH_PLAN))
 if not os.path.isfile(REPEATED_ARGS_PLAN):
     failures.append("%s is missing" % rel(REPEATED_ARGS_PLAN))
+if not os.path.isfile(CI_PLAN):
+    failures.append("%s is missing" % rel(CI_PLAN))
+if not os.path.isfile(CI_WORKFLOW):
+    failures.append("%s is missing" % rel(CI_WORKFLOW))
 
 plans = sorted(glob.glob(os.path.join(DOCS_PLANS, "*.md")))
 if not plans:
@@ -39,6 +45,21 @@ for plan_path in plans:
     plan = read(plan_path)
     if "Status: Completed" not in plan or "make check" not in plan:
         failures.append("%s must record completed status and make check verification" % rel(plan_path))
+
+if os.path.isfile(CI_WORKFLOW):
+    workflow = read(CI_WORKFLOW)
+    if (
+        "uses: actions/checkout@v4" not in workflow
+        or "uses: actions/setup-python@v5" not in workflow
+        or "python -m pip install -r requirements.txt" not in workflow
+        or "run: make check" not in workflow
+    ):
+        failures.append("%s must set up Python, install requirements, and run make check" % rel(CI_WORKFLOW))
+
+for docs_file in ("README.md", "VISION.md", "SECURITY.md", "CHANGES.md"):
+    docs_path = os.path.join(ROOT, docs_file)
+    if not os.path.isfile(docs_path) or "GitHub Actions" not in read(docs_path):
+        failures.append("%s must document the GitHub Actions baseline" % docs_file)
 
 auth_source = read(os.path.join(ROOT, "splunktornado", "auth.py"))
 if "XMLParser(resolve_entities=False, no_network=True)" not in auth_source:
