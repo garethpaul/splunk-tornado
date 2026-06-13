@@ -81,7 +81,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   globally configured curl client because Tornado's curl implementation has no
   equivalent `max_body_size` constructor policy.
 - Synchronous requests and login use a 20-second default transport timeout;
-  caller-provided timeouts are preserved across the single unauthorized retry.
+  caller-provided positive finite timeouts are preserved across the single
+  unauthorized retry, while disabled or malformed timeout values fail locally.
 - Version 0.2.0 is the first package baseline requiring Python 3.10+, Tornado
   6.5.6+, and lxml 6.1.1+.
 - Request encoding tests verify that repeated query and POST parameters remain

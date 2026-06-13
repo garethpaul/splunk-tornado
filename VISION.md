@@ -27,7 +27,8 @@ Priority:
 - Dispatch parsers by exact response media type, not substring matches
 - Keep parser exception handling narrow and observable
 - Keep asynchronous requests compatible with Tornado's supported future API
-- Keep synchronous requests and login refreshes bounded by a transport timeout
+- Keep every request and login refresh bounded by a positive finite transport
+  timeout
 - Keep async session refresh non-blocking and bounded to one replay
 - Validate every login-provided session key before refresh state changes
 - Bound buffered and streamed Splunk responses to 1 MiB before parser dispatch

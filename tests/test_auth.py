@@ -89,6 +89,80 @@ class FakeAsyncHTTPClient(object):
 
 
 class SplunkMixinTests(unittest.TestCase):
+    def test_request_timeout_accepts_positive_finite_real_values(self):
+        handler = DummyHandler()
+        handler.request = type("Request", (), {
+            "connection": type("Connection", (), {
+                "stream": type("Stream", (), {"closed": lambda self: False})()
+            })()
+        })()
+        original_sync_client = tornado.httpclient.HTTPClient
+        original_async_client = auth_module.SimpleAsyncHTTPClient
+        tornado.httpclient.HTTPClient = FakeHTTPClient
+        auth_module.SimpleAsyncHTTPClient = FakeAsyncHTTPClient
+        try:
+            for request_timeout in (1, 0.25):
+                with self.subTest(path="sync", request_timeout=request_timeout):
+                    FakeHTTPClient.instances = []
+                    handler.sync_request(
+                        "/services/search/jobs",
+                        request_timeout=request_timeout,
+                    )
+                    self.assertEqual(
+                        request_timeout,
+                        FakeHTTPClient.instances[0].calls[0][1]["request_timeout"],
+                    )
+
+                with self.subTest(path="async", request_timeout=request_timeout):
+                    FakeAsyncHTTPClient.instances = []
+                    handler.async_request(
+                        "/services/search/jobs",
+                        lambda response, **kwargs: None,
+                        request_timeout=request_timeout,
+                    )
+                    request = FakeAsyncHTTPClient.instances[0].calls[0][0]
+                    self.assertEqual(request_timeout, request.request_timeout)
+        finally:
+            tornado.httpclient.HTTPClient = original_sync_client
+            auth_module.SimpleAsyncHTTPClient = original_async_client
+
+    def test_requests_reject_invalid_timeouts_before_client_construction(self):
+        handler = DummyHandler()
+        invalid_timeouts = (0, -1, float("inf"), float("-inf"), float("nan"), True, False, None, "5")
+        original_sync_client = tornado.httpclient.HTTPClient
+        original_async_client = auth_module.SimpleAsyncHTTPClient
+        tornado.httpclient.HTTPClient = FakeHTTPClient
+        auth_module.SimpleAsyncHTTPClient = FakeAsyncHTTPClient
+        try:
+            for request_timeout in invalid_timeouts:
+                with self.subTest(path="sync", request_timeout=request_timeout):
+                    FakeHTTPClient.instances = []
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        "request_timeout must be a positive finite real number",
+                    ):
+                        handler.sync_request(
+                            "/services/search/jobs",
+                            request_timeout=request_timeout,
+                        )
+                    self.assertEqual([], FakeHTTPClient.instances)
+
+                with self.subTest(path="async", request_timeout=request_timeout):
+                    FakeAsyncHTTPClient.instances = []
+                    with self.assertRaisesRegex(
+                        ValueError,
+                        "request_timeout must be a positive finite real number",
+                    ):
+                        handler.async_request(
+                            "/services/search/jobs",
+                            lambda response, **kwargs: None,
+                            request_timeout=request_timeout,
+                        )
+                    self.assertEqual([], FakeAsyncHTTPClient.instances)
+        finally:
+            tornado.httpclient.HTTPClient = original_sync_client
+            auth_module.SimpleAsyncHTTPClient = original_async_client
+
     def test_parse_response_decodes_json(self):
         response = Response("application/json", b'{"ok": true}')
 

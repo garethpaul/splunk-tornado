@@ -5,6 +5,8 @@ from tornado.simple_httpclient import SimpleAsyncHTTPClient
 from tornado import escape
 from functools import partial
 import logging
+import math
+from numbers import Real
 import lxml.etree as et
 
 try:
@@ -42,6 +44,17 @@ class SplunkMixin(object):
     def encode_args(self, args):
         """Encode Splunk request arguments, preserving repeated parameters."""
         return urlencode(args, doseq=True)
+
+    def _validated_request_timeout(self, request_timeout):
+        valid = not isinstance(request_timeout, bool) and isinstance(request_timeout, Real)
+        if valid:
+            try:
+                valid = math.isfinite(request_timeout) and request_timeout > 0
+            except (OverflowError, TypeError, ValueError):
+                valid = False
+        if not valid:
+            raise ValueError("request_timeout must be a positive finite real number")
+        return request_timeout
 
     def request_url(self, pathname, **kwargs):
         """A fully qualified splunk services uri including encoded get params as **kwargs"""
@@ -121,6 +134,7 @@ class SplunkMixin(object):
         A simplified syncronous http request method for splunk services.
         Returns a tuple based on parse_response method spec.
         """
+        request_timeout = self._validated_request_timeout(request_timeout)
         url = self.request_url(pathname, **kwargs)
         headers = self.request_headers(session_key=session_key)
         http = tornado.httpclient.HTTPClient(
@@ -158,6 +172,7 @@ class SplunkMixin(object):
         A simplified non-blocking asynchronous http request method for splunk services. 
         The callback is called with a response, and xml, json, and text keyword args where xml, json, and text are not passed if not serializable from response/content-type.
         """
+        request_timeout = self._validated_request_timeout(request_timeout)
         url = self.request_url(pathname, **kwargs)
         headers = self.request_headers(session_key=session_key)
         response_callback = partial(self._on_async_response, pathname, callback, post_args=post_args, session_key=session_key, streaming_callback=streaming_callback, request_timeout=request_timeout, retry_on_unauthorized=retry_on_unauthorized, **kwargs)
