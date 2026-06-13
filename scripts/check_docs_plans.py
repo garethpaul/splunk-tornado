@@ -16,6 +16,7 @@ PACKAGE_PLAN = os.path.join(DOCS_PLANS, "2026-06-10-package-build-matrix.md")
 ASYNC_PLAN = os.path.join(DOCS_PLANS, "2026-06-10-tornado-future-async.md")
 RESPONSE_SIZE_PLAN = os.path.join(DOCS_PLANS, "2026-06-12-response-body-size-limit.md")
 ASYNC_REFRESH_PLAN = os.path.join(DOCS_PLANS, "2026-06-12-nonblocking-async-session-refresh.md")
+TIMEOUT_VALIDATION_PLAN = os.path.join(DOCS_PLANS, "2026-06-13-positive-request-timeout-validation.md")
 CI_WORKFLOW = os.path.join(ROOT, ".github", "workflows", "check.yml")
 WORKFLOW_DIR = os.path.dirname(CI_WORKFLOW)
 
@@ -91,6 +92,8 @@ if not os.path.isfile(RESPONSE_SIZE_PLAN):
     failures.append("%s is missing" % rel(RESPONSE_SIZE_PLAN))
 if not os.path.isfile(ASYNC_REFRESH_PLAN):
     failures.append("%s is missing" % rel(ASYNC_REFRESH_PLAN))
+if not os.path.isfile(TIMEOUT_VALIDATION_PLAN):
+    failures.append("%s is missing" % rel(TIMEOUT_VALIDATION_PLAN))
 if not os.path.isfile(CI_WORKFLOW):
     failures.append("%s is missing" % rel(CI_WORKFLOW))
 
@@ -241,6 +244,16 @@ if '"request_timeout": request_timeout' not in sync_request_source:
     failures.append("splunktornado/auth.py must pass the synchronous timeout to Tornado")
 if "session_key=self.session_key,\n                        request_timeout=request_timeout,\n                        retry_on_unauthorized=False" not in sync_request_source:
     failures.append("splunktornado/auth.py must preserve the synchronous timeout across unauthorized retry")
+if "def _validated_request_timeout(self, request_timeout):" not in auth_source:
+    failures.append("splunktornado/auth.py must centralize request timeout validation")
+if "isinstance(request_timeout, bool)" not in auth_source or "isinstance(request_timeout, Real)" not in auth_source:
+    failures.append("splunktornado/auth.py must reject boolean and non-real request timeouts")
+if "math.isfinite(request_timeout)" not in auth_source or "request_timeout > 0" not in auth_source:
+    failures.append("splunktornado/auth.py must require positive finite request timeouts")
+if auth_source.count('raise ValueError("request_timeout must be a positive finite real number")') != 1:
+    failures.append("splunktornado/auth.py must fail closed with the stable request timeout error")
+if auth_source.count("request_timeout = self._validated_request_timeout(request_timeout)") != 2:
+    failures.append("splunktornado/auth.py must validate sync and async request timeouts")
 if "from tornado.simple_httpclient import SimpleAsyncHTTPClient" not in auth_source:
     failures.append("splunktornado/auth.py must use the Tornado client implementation that enforces max_body_size")
 if "async_client_class=SimpleAsyncHTTPClient" not in auth_source:
@@ -303,6 +316,8 @@ for test_name in (
     "test_request_session_key_accepts_safe_login_key",
     "test_request_session_key_rejects_missing_or_unsafe_login_keys",
     "test_request_session_key_uses_default_sync_timeout",
+    "test_request_timeout_accepts_positive_finite_real_values",
+    "test_requests_reject_invalid_timeouts_before_client_construction",
     "test_sync_request_preserves_positional_retry_control_and_default_timeout",
     "test_sync_request_retries_unauthorized_once",
 ):
@@ -318,6 +333,10 @@ for docs_file in ("README.md", "VISION.md", "SECURITY.md", "CHANGES.md"):
 for docs_file in ("README.md", "SECURITY.md", "CHANGES.md"):
     if "20-second" not in read(os.path.join(ROOT, docs_file)):
         failures.append("%s must document the synchronous request timeout" % docs_file)
+
+for docs_file in ("README.md", "VISION.md", "SECURITY.md", "CHANGES.md"):
+    if "positive finite" not in read(os.path.join(ROOT, docs_file)):
+        failures.append("%s must document positive finite request timeout validation" % docs_file)
 
 if failures:
     print("Documentation plan checks failed:\n- %s" % "\n- ".join(failures), file=sys.stderr)

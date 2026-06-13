@@ -1,6 +1,6 @@
 # Positive Request Timeout Validation
 
-## Status: Planned
+## Status: Completed
 
 ## Context
 
@@ -79,3 +79,34 @@ a caller supplies a timeout that cannot represent a positive finite duration.
   receive an explicit local error instead.
 - Positive finite real values remain API-compatible with Tornado's request
   timeout input and require no transport-layer conversion.
+
+## Work Completed
+
+- Added one shared positive finite real timeout validator and invoked it at the
+  synchronous and asynchronous request boundaries before client construction.
+- Preserved the public parameter order, 20-second defaults, accepted timeout
+  values, login behavior, and existing single-retry propagation.
+- Added offline coverage for accepted integer and floating-point values plus
+  zero, negative, infinite, NaN, boolean, `None`, and text rejection on both
+  transport paths before a client can be created.
+- Extended static contracts and maintenance documentation for the fail-closed
+  timeout boundary.
+
+## Verification
+
+- The isolated Python 3.12 authentication suite passed all 33 tests.
+- Pinned wheel and source-distribution builds completed successfully.
+- All 34 isolated packages passed compatibility checking.
+- `pip-audit` reported no known vulnerabilities in the pinned runtime and
+  development requirements.
+- Python compilation and `git diff --check` passed before the full gate.
+- `make check` passed in the isolated pinned Python 3.12 environment, including
+  the completed-plan contract, all 33 tests, wheel and source-distribution
+  builds, and the zero-finding dependency audit.
+- The same full `make check` gate passed from an external working directory.
+- Seven focused hostile mutation categories were rejected: missing sync or
+  async validation, accepted boolean or non-real values, removed finiteness or
+  positivity checks, and removed invalid-timeout regression coverage.
+- Plan-aware security, correctness, API-contract, testing, and maintainability
+  review found and fixed an accepted-value public-path coverage gap, then found
+  no remaining actionable issue.

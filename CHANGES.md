@@ -1,5 +1,11 @@
 # Changes
 
+## 2026-06-13
+
+- Rejected disabled, non-finite, boolean, and malformed request timeouts before
+  synchronous or asynchronous Tornado client construction while preserving
+  positive finite custom values across bounded retries.
+
 ## 2026-06-12
 
 - Added a 20-second default synchronous transport timeout and preserved custom
