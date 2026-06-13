@@ -124,6 +124,9 @@ class SplunkMixin(object):
             self.request_headers(session_key=session_key)
         except ValueError:
             return None
+        stripped_session_key = session_key.strip()
+        if not stripped_session_key or stripped_session_key != session_key:
+            return None
         return session_key
 
     def xml_parser(self):

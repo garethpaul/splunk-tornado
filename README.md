@@ -73,6 +73,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   response.
 - Sync and async login responses share one validator that rejects missing or
   CR/LF-bearing session keys before storing or replaying them.
+- Session-key whitespace validation also rejects blank or surrounding-whitespace
+  login values without silently modifying the server-provided credential.
 - Async requests use Tornado 6's future-returning HTTP client API while keeping
   the mixin's existing response callback contract, including transport errors.
 - Sync, async, retried, and streamed Splunk responses are capped at 1 MiB by
@@ -146,6 +148,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   transport and parser response boundary.
 - See `docs/plans/2026-06-12-nonblocking-async-session-refresh.md` for the
   non-blocking async 401 refresh and replay contract.
+- See `docs/plans/2026-06-13-session-key-whitespace-validation.md` for the
+  shared login credential whitespace boundary.
 
 ## Contributing
 
