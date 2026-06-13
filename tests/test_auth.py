@@ -358,6 +358,10 @@ class SplunkMixinTests(unittest.TestCase):
             auth_module.et.fromstring(
                 b"<response><sessionKey>bad\nkey</sessionKey></response>"
             ),
+            auth_module.et.fromstring(b"<response><sessionKey>   </sessionKey></response>"),
+            auth_module.et.fromstring(b"<response><sessionKey> fresh</sessionKey></response>"),
+            auth_module.et.fromstring(b"<response><sessionKey>fresh </sessionKey></response>"),
+            auth_module.et.fromstring(b"<response><sessionKey>\tfresh\t</sessionKey></response>"),
         ):
             with self.subTest(xml=auth_module.et.tostring(xml)):
                 handler.sync_request = lambda *args, **kwargs: (
@@ -799,10 +803,26 @@ class SplunkMixinTests(unittest.TestCase):
                 Response("text/xml", b""),
                 auth_module.et.fromstring(b"<response><sessionKey>bad\nkey</sessionKey></response>"),
             ),
+            (
+                Response("text/xml", b""),
+                auth_module.et.fromstring(b"<response><sessionKey>   </sessionKey></response>"),
+            ),
+            (
+                Response("text/xml", b""),
+                auth_module.et.fromstring(b"<response><sessionKey> fresh</sessionKey></response>"),
+            ),
+            (
+                Response("text/xml", b""),
+                auth_module.et.fromstring(b"<response><sessionKey>fresh </sessionKey></response>"),
+            ),
+            (
+                Response("text/xml", b""),
+                auth_module.et.fromstring(b"<response><sessionKey>\tfresh\t</sessionKey></response>"),
+            ),
         ):
             handler._on_async_session_key(callback_calls.append, response, xml=xml)
 
-        self.assertEqual([None, None, None], callback_calls)
+        self.assertEqual([None] * 7, callback_calls)
 
 
 if __name__ == "__main__":

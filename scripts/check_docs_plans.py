@@ -17,6 +17,7 @@ ASYNC_PLAN = os.path.join(DOCS_PLANS, "2026-06-10-tornado-future-async.md")
 RESPONSE_SIZE_PLAN = os.path.join(DOCS_PLANS, "2026-06-12-response-body-size-limit.md")
 ASYNC_REFRESH_PLAN = os.path.join(DOCS_PLANS, "2026-06-12-nonblocking-async-session-refresh.md")
 TIMEOUT_VALIDATION_PLAN = os.path.join(DOCS_PLANS, "2026-06-13-positive-request-timeout-validation.md")
+SESSION_KEY_WHITESPACE_PLAN = os.path.join(DOCS_PLANS, "2026-06-13-session-key-whitespace-validation.md")
 CI_WORKFLOW = os.path.join(ROOT, ".github", "workflows", "check.yml")
 WORKFLOW_DIR = os.path.dirname(CI_WORKFLOW)
 
@@ -94,6 +95,8 @@ if not os.path.isfile(ASYNC_REFRESH_PLAN):
     failures.append("%s is missing" % rel(ASYNC_REFRESH_PLAN))
 if not os.path.isfile(TIMEOUT_VALIDATION_PLAN):
     failures.append("%s is missing" % rel(TIMEOUT_VALIDATION_PLAN))
+if not os.path.isfile(SESSION_KEY_WHITESPACE_PLAN):
+    failures.append("%s is missing" % rel(SESSION_KEY_WHITESPACE_PLAN))
 if not os.path.isfile(CI_WORKFLOW):
     failures.append("%s is missing" % rel(CI_WORKFLOW))
 
@@ -299,6 +302,14 @@ if "if not session_key:\n            return None" not in async_session_key_sourc
     failures.append("splunktornado/auth.py must reject missing login session keys")
 if "self.request_headers(session_key=session_key)" not in async_session_key_source:
     failures.append("splunktornado/auth.py must validate login keys through the header boundary")
+session_key_whitespace_guard = (
+    "stripped_session_key = session_key.strip()\n"
+    "        if not stripped_session_key or stripped_session_key != session_key:\n"
+    "            return None\n"
+    "        return session_key"
+)
+if session_key_whitespace_guard not in async_session_key_source:
+    failures.append("splunktornado/auth.py must reject blank or trim-unstable login keys without normalizing them")
 if 'return xml.findtext("sessionKey")' in auth_source:
     failures.append("splunktornado/auth.py must not return unvalidated login session keys")
 
@@ -323,6 +334,16 @@ for test_name in (
 ):
     if "def %s(" % test_name not in test_source:
         failures.append("tests/test_auth.py must retain %s" % test_name)
+for login_key_fixture in (
+    'b"<response><sessionKey>   </sessionKey></response>"',
+    'b"<response><sessionKey> fresh</sessionKey></response>"',
+    'b"<response><sessionKey>fresh </sessionKey></response>"',
+    'b"<response><sessionKey>\\tfresh\\t</sessionKey></response>"',
+):
+    if test_source.count(login_key_fixture) != 2:
+        failures.append("tests/test_auth.py must cover sync and async rejection for %s" % login_key_fixture)
+if "self.assertEqual([None] * 7, callback_calls)" not in test_source:
+    failures.append("tests/test_auth.py must retain all async unsafe-login rejection outcomes")
 
 for docs_file in ("README.md", "VISION.md", "SECURITY.md", "CHANGES.md"):
     if "1 MiB" not in read(os.path.join(ROOT, docs_file)):
@@ -337,6 +358,8 @@ for docs_file in ("README.md", "SECURITY.md", "CHANGES.md"):
 for docs_file in ("README.md", "VISION.md", "SECURITY.md", "CHANGES.md"):
     if "positive finite" not in read(os.path.join(ROOT, docs_file)):
         failures.append("%s must document positive finite request timeout validation" % docs_file)
+    if "session-key whitespace validation" not in read(os.path.join(ROOT, docs_file)).lower():
+        failures.append("%s must document session-key whitespace validation" % docs_file)
 
 if failures:
     print("Documentation plan checks failed:\n- %s" % "\n- ".join(failures), file=sys.stderr)

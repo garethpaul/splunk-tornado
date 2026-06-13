@@ -2,6 +2,8 @@
 
 ## 2026-06-13
 
+- Added shared session-key whitespace validation for synchronous and
+  asynchronous login responses without normalizing credential values.
 - Rejected disabled, non-finite, boolean, and malformed request timeouts before
   synchronous or asynchronous Tornado client construction while preserving
   positive finite custom values across bounded retries.

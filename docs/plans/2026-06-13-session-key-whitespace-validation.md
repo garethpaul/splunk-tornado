@@ -1,6 +1,6 @@
 # Session Key Whitespace Validation
 
-## Status: Planned
+## Status: Completed
 
 ## Context
 
@@ -55,3 +55,24 @@ whitespace validation phrase.
 
 This change does not rotate credentials, change Authorization header syntax,
 alter retry counts, normalize valid keys, or claim live Splunk compatibility.
+
+## Work Completed
+
+- Added a shared nonblank and trim-stability check after existing text and
+  newline validation in `_session_key_from_xml()`.
+- Extended synchronous and asynchronous login rejection tables with blank,
+  leading-space, trailing-space, and tab-surrounded keys.
+- Synchronized the static contract and maintained authentication guidance.
+
+## Verification Results
+
+- The focused synchronous and asynchronous login-key regressions passed.
+- The isolated pinned Python 3.12 `make check` passed all 33 offline tests,
+  wheel and source-distribution builds, and pip-audit with no known
+  vulnerabilities.
+- The same full gate passed from an external working directory.
+- Seven guard-removal, trim-weakening, normalization, fixture, documentation,
+  and plan-status mutations were rejected.
+- Wheel and source-distribution metadata/content inspection passed for version
+  0.2.0, Python 3.10+, package sources, and tests; generated build and bytecode
+  artifacts were removed before review.
