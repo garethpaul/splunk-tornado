@@ -20,6 +20,7 @@ TIMEOUT_VALIDATION_PLAN = os.path.join(DOCS_PLANS, "2026-06-13-positive-request-
 SESSION_KEY_WHITESPACE_PLAN = os.path.join(DOCS_PLANS, "2026-06-13-session-key-whitespace-validation.md")
 ROOT_OVERRIDE_PLAN = os.path.join(DOCS_PLANS, "2026-06-14-make-root-override-protection.md")
 HEADER_WHITESPACE_PLAN = os.path.join(DOCS_PLANS, "2026-06-14-session-key-header-whitespace.md")
+SESSION_KEY_CONTROL_PLAN = os.path.join(DOCS_PLANS, "2026-06-14-session-key-control-characters.md")
 CI_WORKFLOW = os.path.join(ROOT, ".github", "workflows", "check.yml")
 WORKFLOW_DIR = os.path.dirname(CI_WORKFLOW)
 
@@ -103,6 +104,8 @@ if not os.path.isfile(ROOT_OVERRIDE_PLAN):
     failures.append("%s is missing" % rel(ROOT_OVERRIDE_PLAN))
 if not os.path.isfile(HEADER_WHITESPACE_PLAN):
     failures.append("%s is missing" % rel(HEADER_WHITESPACE_PLAN))
+if not os.path.isfile(SESSION_KEY_CONTROL_PLAN):
+    failures.append("%s is missing" % rel(SESSION_KEY_CONTROL_PLAN))
 if not os.path.isfile(CI_WORKFLOW):
     failures.append("%s is missing" % rel(CI_WORKFLOW))
 
@@ -227,6 +230,10 @@ if '"\\r" in session_key or "\\n" in session_key' not in auth_source:
     failures.append("splunktornado/auth.py must reject newline characters in session keys before building headers")
 if 'raise ValueError("session_key must not contain newline characters")' not in auth_source:
     failures.append("splunktornado/auth.py must fail closed on unsafe session keys")
+if "ord(character) < 32 or ord(character) == 127" not in auth_source:
+    failures.append("splunktornado/auth.py must reject ASCII control characters in session keys")
+if 'raise ValueError("session_key must not contain control characters")' not in auth_source:
+    failures.append("splunktornado/auth.py must report rejected session-key controls consistently")
 if "string_types = (basestring,)" not in auth_source or "string_types = (str,)" not in auth_source:
     failures.append("splunktornado/auth.py must define Python 2/3 text session-key types")
 if "if not isinstance(session_key, string_types):" not in auth_source:
@@ -354,6 +361,7 @@ for test_name in (
     "test_request_session_key_uses_default_sync_timeout",
     "test_request_headers_preserves_none_and_safe_session_keys",
     "test_request_headers_rejects_blank_or_trim_unstable_session_keys",
+    "test_request_headers_rejects_ascii_control_characters",
     "test_request_timeout_accepts_positive_finite_real_values",
     "test_requests_reject_invalid_timeouts_before_client_construction",
     "test_sync_request_preserves_positional_retry_control_and_default_timeout",
@@ -366,10 +374,12 @@ for login_key_fixture in (
     'b"<response><sessionKey> fresh</sessionKey></response>"',
     'b"<response><sessionKey>fresh </sessionKey></response>"',
     'b"<response><sessionKey>\\tfresh\\t</sessionKey></response>"',
+    'b"<response><sessionKey>fresh\\tkey</sessionKey></response>"',
+    'b"<response><sessionKey>fresh&#127;key</sessionKey></response>"',
 ):
     if test_source.count(login_key_fixture) != 2:
         failures.append("tests/test_auth.py must cover sync and async rejection for %s" % login_key_fixture)
-if "self.assertEqual([None] * 7, callback_calls)" not in test_source:
+if "self.assertEqual([None] * 9, callback_calls)" not in test_source:
     failures.append("tests/test_auth.py must retain all async unsafe-login rejection outcomes")
 
 for docs_file in ("README.md", "VISION.md", "SECURITY.md", "CHANGES.md"):
@@ -389,6 +399,8 @@ for docs_file in ("README.md", "VISION.md", "SECURITY.md", "CHANGES.md"):
         failures.append("%s must document session-key whitespace validation" % docs_file)
     if "session-key header whitespace validation" not in read(os.path.join(ROOT, docs_file)).lower():
         failures.append("%s must document session-key header whitespace validation" % docs_file)
+    if "session-key control-character validation" not in read(os.path.join(ROOT, docs_file)).lower():
+        failures.append("%s must document session-key control-character validation" % docs_file)
 
 if os.path.isfile(HEADER_WHITESPACE_PLAN):
     header_plan = read(HEADER_WHITESPACE_PLAN)
@@ -399,6 +411,17 @@ if os.path.isfile(HEADER_WHITESPACE_PLAN):
     ):
         if evidence not in header_plan:
             failures.append("%s must record verification evidence %r" % (rel(HEADER_WHITESPACE_PLAN), evidence))
+
+if os.path.isfile(SESSION_KEY_CONTROL_PLAN):
+    control_plan = read(SESSION_KEY_CONTROL_PLAN)
+    for evidence in (
+        "Status: Completed",
+        "repository and external-directory `make check` passed",
+        "hostile session-key control mutations were rejected",
+        "generated-artifact and credential-pattern audits passed",
+    ):
+        if evidence not in control_plan:
+            failures.append("%s must record verification evidence %r" % (rel(SESSION_KEY_CONTROL_PLAN), evidence))
 
 if failures:
     print("Documentation plan checks failed:\n- %s" % "\n- ".join(failures), file=sys.stderr)

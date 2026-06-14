@@ -33,6 +33,7 @@ Priority:
 - Validate every login-provided session key before refresh state changes
 - Preserve session-key whitespace validation without normalizing credentials
 - Preserve session-key header whitespace validation for every credential source
+- Preserve session-key control-character validation before header construction
 - Bound buffered and streamed Splunk responses to 1 MiB before parser dispatch
 - Keep completed maintenance plans under `docs/plans`
 - Keep GitHub Actions running package builds, tests, and audits across the

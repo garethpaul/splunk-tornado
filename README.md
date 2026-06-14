@@ -77,6 +77,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   login values without silently modifying the server-provided credential.
 - Session-key header whitespace validation applies the same non-normalizing
   boundary to caller-provided Authorization credentials; only `None` omits it.
+- Session-key control-character validation rejects ASCII controls from direct
+  and login-provided credentials before they can enter Authorization headers.
 - Async requests use Tornado 6's future-returning HTTP client API while keeping
   the mixin's existing response callback contract, including transport errors.
 - Sync, async, retried, and streamed Splunk responses are capped at 1 MiB by

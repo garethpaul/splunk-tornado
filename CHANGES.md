@@ -2,6 +2,8 @@
 
 ## 2026-06-14
 
+- Added session-key control-character validation for direct and login-provided
+  credentials before Authorization header construction.
 - Added session-key header whitespace validation for caller-provided
   Authorization credentials and centralized login validation on that boundary.
 

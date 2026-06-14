@@ -342,6 +342,14 @@ class SplunkMixinTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     handler.request_headers(session_key=session_key)
 
+    def test_request_headers_rejects_ascii_control_characters(self):
+        handler = DummyHandler()
+
+        for control in ("\x00", "\x01", "\t", "\x1f", "\x7f"):
+            with self.subTest(control=repr(control)):
+                with self.assertRaisesRegex(ValueError, "control characters"):
+                    handler.request_headers(session_key="fresh%skey" % control)
+
     def test_request_session_key_accepts_safe_login_key(self):
         handler = DummyHandler()
         handler.settings = dict(
@@ -381,6 +389,8 @@ class SplunkMixinTests(unittest.TestCase):
             auth_module.et.fromstring(b"<response><sessionKey> fresh</sessionKey></response>"),
             auth_module.et.fromstring(b"<response><sessionKey>fresh </sessionKey></response>"),
             auth_module.et.fromstring(b"<response><sessionKey>\tfresh\t</sessionKey></response>"),
+            auth_module.et.fromstring(b"<response><sessionKey>fresh\tkey</sessionKey></response>"),
+            auth_module.et.fromstring(b"<response><sessionKey>fresh&#127;key</sessionKey></response>"),
         ):
             with self.subTest(xml=auth_module.et.tostring(xml)):
                 handler.sync_request = lambda *args, **kwargs: (
@@ -838,10 +848,18 @@ class SplunkMixinTests(unittest.TestCase):
                 Response("text/xml", b""),
                 auth_module.et.fromstring(b"<response><sessionKey>\tfresh\t</sessionKey></response>"),
             ),
+            (
+                Response("text/xml", b""),
+                auth_module.et.fromstring(b"<response><sessionKey>fresh\tkey</sessionKey></response>"),
+            ),
+            (
+                Response("text/xml", b""),
+                auth_module.et.fromstring(b"<response><sessionKey>fresh&#127;key</sessionKey></response>"),
+            ),
         ):
             handler._on_async_session_key(callback_calls.append, response, xml=xml)
 
-        self.assertEqual([None] * 7, callback_calls)
+        self.assertEqual([None] * 9, callback_calls)
 
 
 if __name__ == "__main__":
