@@ -1,6 +1,6 @@
 # Session Key Control Characters
 
-## Status: Planned
+## Status: Completed
 
 ## Context
 
@@ -46,6 +46,19 @@ HTTP control characters into request headers.
 - hostile control-range, header, XML, documentation, suite-count, and plan
   mutations
 - generated-artifact, credential-pattern, and exact-diff audits
+
+## Verification Results
+
+- Focused direct-header, synchronous-login, and asynchronous-login regressions
+  passed, and the full 36-test offline suite passed.
+- The repository and external-directory `make check` passed with the isolated
+  Python 3.12 environment pinned by `requirements.txt` and
+  `requirements-dev.txt`, including wheel/sdist builds and `pip-audit`.
+- Six hostile session-key control mutations were rejected across the control
+  range, stable error, direct regression, XML fixtures, maintained docs, and
+  completed-plan contracts.
+- Final generated-artifact and credential-pattern audits passed alongside the
+  exact-diff and staged-path review.
 
 ## Risks
 

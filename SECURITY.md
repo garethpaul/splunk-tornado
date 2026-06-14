@@ -48,6 +48,8 @@ Helpful reports include:
   before shared authentication state changes.
 - Session-key header whitespace validation rejects explicit blank or
   trim-unstable caller credentials while preserving `None` as unauthenticated.
+- Session-key control-character validation rejects ASCII controls from direct
+  and login-provided credentials before Authorization header construction.
 - Synchronous and asynchronous login keys pass through the same Authorization
   header validation before refresh updates shared authentication state.
 - Synchronous Splunk requests and login refreshes use a bounded 20-second

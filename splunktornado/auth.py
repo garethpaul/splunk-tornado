@@ -72,6 +72,8 @@ class SplunkMixin(object):
                 raise ValueError("session_key must be text")
             if "\r" in session_key or "\n" in session_key:
                 raise ValueError("session_key must not contain newline characters")
+            if any(ord(character) < 32 or ord(character) == 127 for character in session_key):
+                raise ValueError("session_key must not contain control characters")
             stripped_session_key = session_key.strip()
             if not stripped_session_key or stripped_session_key != session_key:
                 raise ValueError("session_key must be nonblank without surrounding whitespace")
