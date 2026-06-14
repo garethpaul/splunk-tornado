@@ -150,6 +150,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   non-blocking async 401 refresh and replay contract.
 - See `docs/plans/2026-06-13-session-key-whitespace-validation.md` for the
   shared login credential whitespace boundary.
+- See `docs/plans/2026-06-14-make-root-override-protection.md` for authoritative
+  repository-root selection across all Make aliases.
 
 ## Contributing
 
