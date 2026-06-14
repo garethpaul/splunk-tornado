@@ -1,6 +1,6 @@
 # Make Root Override Protection
 
-## Status: Planned
+## Status: Completed
 
 ## Context
 
@@ -24,24 +24,35 @@ select its own root while preserving the intentional `PYTHON` tool override.
 - Add mutation-sensitive source, documentation, and completed-plan contracts.
 - Retain the pinned package, vulnerability audit, and hosted Python matrix.
 
-## Planned Work
+## Work Completed
 
-- Mark the Makefile root assignment as an explicit GNU Make override.
-- Extend the fail-closed checker to require one protected declaration, its
+- Marked the Makefile root assignment as an explicit GNU Make override.
+- Extended the fail-closed checker to require one protected declaration, its
   ordering, the alias graph, README indexing, and this plan's evidence.
-- Keep authentication behavior, package metadata, dependencies, and workflow
+- Kept authentication behavior, package metadata, dependencies, and workflow
   policy unchanged.
 
-## Verification Plan
+## Verification
 
-- Run focused contracts, offline tests, package builds, and full `make check`.
-- Run every public alias from repository and external working directories with
-  hostile environment and command-line root assignments.
-- Reject declaration, ordering, alias, path, documentation, and plan mutations.
-- Audit package artifacts, generated files, secrets, protected source, and the
-  exact diff.
-- Require all hosted Python versions on both canonical events at the exact
-  implementation head.
+- The pinned Python 3.12 `make check` passed documentation contracts, all 33
+  offline tests, wheel and source-distribution builds, and pip-audit with no
+  known vulnerabilities; the isolated environment also passed `pip check`.
+- All six public Make aliases passed from both repository and external working
+  directories with hostile environment and command-line `ROOT` assignments,
+  for 24 bounded precedence cases.
+- The explicit `PYTHON` override remained effective across compilation, tests,
+  package builds, and the dependency audit.
+- Seven declaration, duplicate, placement, alias, path, README, and plan
+  mutations were rejected for the intended reason.
+- Built wheel and source distributions contained the expected metadata,
+  package sources, documentation, and offline tests.
+- Exact diff, protected-source, generated-artifact, high-confidence secret, and
+  `git diff --check` audits passed. Only explicitly named validation-created
+  build, distribution, and bytecode paths were removed; the pre-existing
+  ignored egg-info directory was preserved.
+
+All hosted Python versions remain required on both canonical events at the
+exact implementation head.
 
 ## Scope Boundary
 

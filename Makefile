@@ -1,7 +1,7 @@
 .PHONY: audit build check lint test verify
 
 PYTHON ?= python3
-ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+override ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
 lint:
 	$(PYTHON) -m py_compile "$(ROOT)/setup.py" "$(ROOT)/splunktornado/auth.py"

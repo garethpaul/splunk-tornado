@@ -18,6 +18,7 @@ RESPONSE_SIZE_PLAN = os.path.join(DOCS_PLANS, "2026-06-12-response-body-size-lim
 ASYNC_REFRESH_PLAN = os.path.join(DOCS_PLANS, "2026-06-12-nonblocking-async-session-refresh.md")
 TIMEOUT_VALIDATION_PLAN = os.path.join(DOCS_PLANS, "2026-06-13-positive-request-timeout-validation.md")
 SESSION_KEY_WHITESPACE_PLAN = os.path.join(DOCS_PLANS, "2026-06-13-session-key-whitespace-validation.md")
+ROOT_OVERRIDE_PLAN = os.path.join(DOCS_PLANS, "2026-06-14-make-root-override-protection.md")
 CI_WORKFLOW = os.path.join(ROOT, ".github", "workflows", "check.yml")
 WORKFLOW_DIR = os.path.dirname(CI_WORKFLOW)
 
@@ -97,6 +98,8 @@ if not os.path.isfile(TIMEOUT_VALIDATION_PLAN):
     failures.append("%s is missing" % rel(TIMEOUT_VALIDATION_PLAN))
 if not os.path.isfile(SESSION_KEY_WHITESPACE_PLAN):
     failures.append("%s is missing" % rel(SESSION_KEY_WHITESPACE_PLAN))
+if not os.path.isfile(ROOT_OVERRIDE_PLAN):
+    failures.append("%s is missing" % rel(ROOT_OVERRIDE_PLAN))
 if not os.path.isfile(CI_WORKFLOW):
     failures.append("%s is missing" % rel(CI_WORKFLOW))
 
@@ -165,14 +168,25 @@ for phrase in ('requires = ["setuptools==82.0.1"]', 'build-backend = "setuptools
         failures.append("pyproject.toml must contain %s" % phrase)
 
 makefile = read(os.path.join(ROOT, "Makefile"))
+root_declaration = "override ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))"
+if makefile.count(root_declaration) != 1:
+    failures.append("Makefile must contain exactly one protected repository-root declaration")
+if makefile.count("PYTHON ?= python3\n" + root_declaration) != 1:
+    failures.append("Makefile must keep the Python override before the protected repository root")
 for phrase in (
-    "ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))",
+    ".PHONY: audit build check lint test verify",
+    "build: lint",
+    "verify: lint test build",
+    "check: verify audit",
     '$(PYTHON) -m build --no-isolation --outdir "$(ROOT)/dist" "$(ROOT)"',
     '"$(ROOT)/requirements.txt"',
     '"$(ROOT)/requirements-dev.txt"',
 ):
     if phrase not in makefile:
         failures.append("Makefile must contain %s" % phrase)
+
+if "docs/plans/2026-06-14-make-root-override-protection.md" not in read(os.path.join(ROOT, "README.md")):
+    failures.append("README.md must index Make root override protection evidence")
 
 manifest = read(os.path.join(ROOT, "MANIFEST.in"))
 if "include README README.md requirements.txt requirements-dev.txt" not in manifest:
