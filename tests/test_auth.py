@@ -320,8 +320,27 @@ class SplunkMixinTests(unittest.TestCase):
     def test_request_headers_rejects_non_text_session_key(self):
         handler = DummyHandler()
 
-        with self.assertRaises(ValueError):
-            handler.request_headers(session_key=object())
+        for session_key in (object(), False, 0):
+            with self.subTest(session_key=session_key):
+                with self.assertRaises(ValueError):
+                    handler.request_headers(session_key=session_key)
+
+    def test_request_headers_preserves_none_and_safe_session_keys(self):
+        handler = DummyHandler()
+
+        self.assertEqual({}, handler.request_headers(session_key=None))
+        self.assertEqual(
+            {"Authorization": "Splunk opaque interior key"},
+            handler.request_headers(session_key="opaque interior key"),
+        )
+
+    def test_request_headers_rejects_blank_or_trim_unstable_session_keys(self):
+        handler = DummyHandler()
+
+        for session_key in ("", "   ", " leading", "trailing ", "\twrapped\t"):
+            with self.subTest(session_key=repr(session_key)):
+                with self.assertRaises(ValueError):
+                    handler.request_headers(session_key=session_key)
 
     def test_request_session_key_accepts_safe_login_key(self):
         handler = DummyHandler()

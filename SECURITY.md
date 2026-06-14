@@ -46,6 +46,8 @@ Helpful reports include:
   original 401 instead of blocking the event loop or widening retry behavior.
 - Session-key whitespace validation rejects blank or trim-unstable login values
   before shared authentication state changes.
+- Session-key header whitespace validation rejects explicit blank or
+  trim-unstable caller credentials while preserving `None` as unauthenticated.
 - Synchronous and asynchronous login keys pass through the same Authorization
   header validation before refresh updates shared authentication state.
 - Synchronous Splunk requests and login refreshes use a bounded 20-second
