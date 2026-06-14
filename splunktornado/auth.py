@@ -67,11 +67,14 @@ class SplunkMixin(object):
     def request_headers(self, session_key=None):
         """The splunk request headers with the Authorization session key if provided."""
         headers = {}
-        if session_key:
+        if session_key is not None:
             if not isinstance(session_key, string_types):
                 raise ValueError("session_key must be text")
             if "\r" in session_key or "\n" in session_key:
                 raise ValueError("session_key must not contain newline characters")
+            stripped_session_key = session_key.strip()
+            if not stripped_session_key or stripped_session_key != session_key:
+                raise ValueError("session_key must be nonblank without surrounding whitespace")
             headers["Authorization"] = "Splunk %s" % session_key
         return headers
     
@@ -123,9 +126,6 @@ class SplunkMixin(object):
         try:
             self.request_headers(session_key=session_key)
         except ValueError:
-            return None
-        stripped_session_key = session_key.strip()
-        if not stripped_session_key or stripped_session_key != session_key:
             return None
         return session_key
 

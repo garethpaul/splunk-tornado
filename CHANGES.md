@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-14
+
+- Added session-key header whitespace validation for caller-provided
+  Authorization credentials and centralized login validation on that boundary.
+
 ## 2026-06-13
 
 - Added shared session-key whitespace validation for synchronous and

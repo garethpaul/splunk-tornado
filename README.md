@@ -75,6 +75,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   CR/LF-bearing session keys before storing or replaying them.
 - Session-key whitespace validation also rejects blank or surrounding-whitespace
   login values without silently modifying the server-provided credential.
+- Session-key header whitespace validation applies the same non-normalizing
+  boundary to caller-provided Authorization credentials; only `None` omits it.
 - Async requests use Tornado 6's future-returning HTTP client API while keeping
   the mixin's existing response callback contract, including transport errors.
 - Sync, async, retried, and streamed Splunk responses are capped at 1 MiB by
@@ -152,6 +154,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   shared login credential whitespace boundary.
 - See `docs/plans/2026-06-14-make-root-override-protection.md` for authoritative
   repository-root selection across all Make aliases.
+- See `docs/plans/2026-06-14-session-key-header-whitespace.md` for the shared
+  caller and login Authorization credential boundary.
 
 ## Contributing
 

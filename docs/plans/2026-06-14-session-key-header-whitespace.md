@@ -1,6 +1,6 @@
 # Session Key Header Whitespace
 
-## Status: Planned
+## Status: Completed
 
 ## Context
 
@@ -25,9 +25,13 @@ non-normalizing header validator before credential material enters a request.
 
 ## Verification
 
-- focused and complete offline unit tests
-- repository and external-directory pinned `make check`
-- hostile sentinel, type, blank, trim, newline, shared-helper, documentation,
-  suite-count, and plan-status mutations
-- wheel/sdist metadata and installation smoke tests
-- generated-artifact, credential-pattern, and exact-diff audits
+- Four focused header/login regressions and all 35 offline unit tests passed.
+- The repository and external-directory pinned `make check` passed with the
+  maintained Python 3.12 environment.
+- Nine hostile header whitespace mutations were rejected: sentinel, type,
+  blank, trim, newline, shared-helper, documentation, suite-count, and
+  plan-status regressions.
+- Wheel and sdist builds passed, and `pip-audit` reported no known
+  vulnerabilities in the pinned runtime and development requirements.
+- Generated-artifact, credential-pattern, and exact-diff audits passed before
+  commit.
