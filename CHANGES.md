@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-16
+
+- Raised the pinned and declared Tornado floor to 6.5.7, the first release that
+  fixes credential leakage advisory `GHSA-pw6j-qg29-8w7f`.
+
 ## 2026-06-14
 
 - Added session-key control-character validation for direct and login-provided

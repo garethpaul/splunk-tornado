@@ -90,7 +90,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   caller-provided positive finite timeouts are preserved across the single
   unauthorized retry, while disabled or malformed timeout values fail locally.
 - Version 0.2.0 is the first package baseline requiring Python 3.10+, Tornado
-  6.5.6+, and lxml 6.1.1+.
+  6.5.7+, and lxml 6.1.1+. Tornado 6.5.7 is the minimum patched release for
+  `GHSA-pw6j-qg29-8w7f`.
 - Request encoding tests verify that repeated query and POST parameters remain
   repeated fields instead of collapsing into a Python list string.
 - Header tests verify that session keys containing carriage returns or newlines

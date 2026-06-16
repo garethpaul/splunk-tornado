@@ -1,6 +1,6 @@
 # Tornado 6.5.7 Advisory Remediation
 
-## Status: In Progress
+## Status: Completed
 
 ## Context
 
@@ -49,7 +49,20 @@ together.
 
 ## Verification Results
 
-- Pending implementation and validation.
+- The pre-change pinned gate failed on Tornado 6.5.6 with
+  `GHSA-pw6j-qg29-8w7f`, confirming the advisory regression baseline.
+- 36 offline tests passed with Tornado 6.5.7 in the isolated Python 3.12
+  environment.
+- The repository and external-directory `make check` passed, including wheel
+  and source-distribution builds.
+- Built package metadata requires `tornado>=6.5.7,<7`.
+- pip-audit reported no known vulnerabilities.
+  The audit covered the pinned runtime and development requirements.
+- Six hostile advisory mutations were rejected across the exact pin, package
+  floor, advisory identity, maintained documentation, checker coverage, and
+  completed-plan status.
+- Final generated-artifact and credential-pattern audits passed alongside the
+  exact-diff and clean-worktree review.
 
 ## Risks
 

@@ -21,6 +21,7 @@ SESSION_KEY_WHITESPACE_PLAN = os.path.join(DOCS_PLANS, "2026-06-13-session-key-w
 ROOT_OVERRIDE_PLAN = os.path.join(DOCS_PLANS, "2026-06-14-make-root-override-protection.md")
 HEADER_WHITESPACE_PLAN = os.path.join(DOCS_PLANS, "2026-06-14-session-key-header-whitespace.md")
 SESSION_KEY_CONTROL_PLAN = os.path.join(DOCS_PLANS, "2026-06-14-session-key-control-characters.md")
+TORNADO_ADVISORY_PLAN = os.path.join(DOCS_PLANS, "2026-06-16-tornado-6-5-7-advisory-remediation.md")
 CI_WORKFLOW = os.path.join(ROOT, ".github", "workflows", "check.yml")
 WORKFLOW_DIR = os.path.dirname(CI_WORKFLOW)
 
@@ -106,6 +107,8 @@ if not os.path.isfile(HEADER_WHITESPACE_PLAN):
     failures.append("%s is missing" % rel(HEADER_WHITESPACE_PLAN))
 if not os.path.isfile(SESSION_KEY_CONTROL_PLAN):
     failures.append("%s is missing" % rel(SESSION_KEY_CONTROL_PLAN))
+if not os.path.isfile(TORNADO_ADVISORY_PLAN):
+    failures.append("%s is missing" % rel(TORNADO_ADVISORY_PLAN))
 if not os.path.isfile(CI_WORKFLOW):
     failures.append("%s is missing" % rel(CI_WORKFLOW))
 
@@ -150,13 +153,13 @@ if workflow_files != [CI_WORKFLOW]:
 requirements = read(os.path.join(ROOT, "requirements.txt"))
 requirements_dev = read(os.path.join(ROOT, "requirements-dev.txt"))
 setup_source = read(os.path.join(ROOT, "setup.py"))
-for requirement in ("lxml==6.1.1", "tornado==6.5.6"):
+for requirement in ("lxml==6.1.1", "tornado==6.5.7"):
     if requirement not in requirements:
         failures.append("requirements.txt must pin %s" % requirement)
 for requirement in ("build==1.5.0", "pip-audit==2.10.0", "setuptools==82.0.1"):
     if requirement not in requirements_dev:
         failures.append("requirements-dev.txt must pin %s" % requirement)
-for requirement in ("lxml>=6.1.1,<7", "tornado>=6.5.6,<7"):
+for requirement in ("lxml>=6.1.1,<7", "tornado>=6.5.7,<7"):
     if requirement not in setup_source:
         failures.append("setup.py must bound runtime dependency %s" % requirement)
 if 'python_requires=">=3.10"' not in setup_source:
@@ -202,8 +205,25 @@ if "include README README.md requirements.txt requirements-dev.txt" not in manif
 
 for docs_file in ("README.md", "VISION.md", "SECURITY.md", "CHANGES.md"):
     docs_path = os.path.join(ROOT, docs_file)
-    if not os.path.isfile(docs_path) or "GitHub Actions" not in read(docs_path):
+    docs_source = read(docs_path) if os.path.isfile(docs_path) else ""
+    if "GitHub Actions" not in docs_source:
         failures.append("%s must document the GitHub Actions baseline" % docs_file)
+    if "6.5.7" not in docs_source or "GHSA-pw6j-qg29-8w7f" not in docs_source:
+        failures.append("%s must document the patched Tornado advisory floor" % docs_file)
+
+advisory_plan = read(TORNADO_ADVISORY_PLAN) if os.path.isfile(TORNADO_ADVISORY_PLAN) else ""
+for evidence in (
+    "Status: Completed",
+    "GHSA-pw6j-qg29-8w7f",
+    "Tornado 6.5.7",
+    "36 offline tests passed",
+    "repository and external-directory `make check` passed",
+    "pip-audit reported no known vulnerabilities",
+    "hostile advisory mutations were rejected",
+    "generated-artifact and credential-pattern audits passed",
+):
+    if evidence not in advisory_plan:
+        failures.append("%s must record verification evidence %r" % (rel(TORNADO_ADVISORY_PLAN), evidence))
 
 auth_source = read(os.path.join(ROOT, "splunktornado", "auth.py"))
 if "self.async_callback(" in auth_source:

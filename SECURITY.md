@@ -35,6 +35,9 @@ Helpful reports include:
 - The baseline pins and audits Tornado and lxml; CI actions are pinned by
   commit and run with read-only repository contents permission and
   credential-free checkout on every push and pull request.
+- Tornado 6.5.7 is the minimum supported release because it patches
+  `GHSA-pw6j-qg29-8w7f`, which can leak per-request credentials when curl
+  handles are reused.
 - Async Splunk requests use Tornado 6's supported future completion path so
   authentication retries and response callbacks execute under the pinned API.
 - Splunk response bodies are limited to 1 MiB at the Tornado transport layer,

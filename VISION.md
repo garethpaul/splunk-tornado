@@ -38,6 +38,8 @@ Priority:
 - Keep completed maintenance plans under `docs/plans`
 - Keep GitHub Actions running package builds, tests, and audits across the
   supported Python matrix on every push and pull request before review
+- Keep Tornado at 6.5.7 or newer so the maintained dependency floor excludes
+  `GHSA-pw6j-qg29-8w7f`
 - Treat Python 2 and older Tornado APIs as legacy constraints
 
 Next priorities:
