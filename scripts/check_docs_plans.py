@@ -76,7 +76,7 @@ if os.path.isfile(CI_WORKFLOW):
 requirements = read(os.path.join(ROOT, "requirements.txt"))
 requirements_dev = read(os.path.join(ROOT, "requirements-dev.txt"))
 setup_source = read(os.path.join(ROOT, "setup.py"))
-for requirement in ("lxml==6.1.1", "tornado==6.5.6"):
+for requirement in ("lxml==6.1.1", "tornado==6.5.7"):
     if requirement not in requirements:
         failures.append("requirements.txt must pin %s" % requirement)
 for requirement in ("build==1.5.0", "pip-audit==2.10.0", "setuptools==82.0.1"):
