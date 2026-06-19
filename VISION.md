@@ -27,9 +27,19 @@ Priority:
 - Dispatch parsers by exact response media type, not substring matches
 - Keep parser exception handling narrow and observable
 - Keep asynchronous requests compatible with Tornado's supported future API
+- Keep every request and login refresh bounded by a positive finite transport
+  timeout
+- Keep async session refresh non-blocking and bounded to one replay
+- Validate every login-provided session key before refresh state changes
+- Preserve session-key whitespace validation without normalizing credentials
+- Preserve session-key header whitespace validation for every credential source
+- Preserve session-key control-character validation before header construction
+- Bound buffered and streamed Splunk responses to 1 MiB before parser dispatch
 - Keep completed maintenance plans under `docs/plans`
 - Keep GitHub Actions running package builds, tests, and audits across the
-  supported Python matrix before review
+  supported Python matrix on every push and pull request before review
+- Keep Tornado at 6.5.7 or newer so the maintained dependency floor excludes
+  `GHSA-pw6j-qg29-8w7f`
 - Treat Python 2 and older Tornado APIs as legacy constraints
 
 Next priorities:
@@ -62,6 +72,7 @@ all upstream request paths explicit.
 
 - Credential or session-key logging
 - Unbounded retries
+- Unbounded upstream response bodies
 - XML parsing that can resolve external entities or use network access
 - Bare parser exception handlers that can hide unrelated failures
 - Hidden proxying to arbitrary Splunk paths

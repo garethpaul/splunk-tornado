@@ -1,18 +1,62 @@
 # Changes
 
+## 2026-06-19
+
+- Made supported XML, JSON, and text responses with missing bodies use the
+  parser's normalized empty body instead of raising or returning `None`.
+
+## 2026-06-16
+
+- Raised the pinned and declared Tornado floor to 6.5.7, the first release that
+  fixes credential leakage advisory `GHSA-pw6j-qg29-8w7f`.
+
+## 2026-06-14
+
+- Added session-key control-character validation for direct and login-provided
+  credentials before Authorization header construction.
+- Added session-key header whitespace validation for caller-provided
+  Authorization credentials and centralized login validation on that boundary.
+
+## 2026-06-13
+
+- Added shared session-key whitespace validation for synchronous and
+  asynchronous login responses without normalizing credential values.
+- Rejected disabled, non-finite, boolean, and malformed request timeouts before
+  synchronous or asynchronous Tornado client construction while preserving
+  positive finite custom values across bounded retries.
+
+## 2026-06-12
+
+- Added a 20-second default synchronous transport timeout and preserved custom
+  timeouts across the single unauthorized retry.
+- Capped synchronous, asynchronous, retried, and streamed Splunk responses at
+  1 MiB in Tornado and rejected oversized custom response bodies before parser
+  dispatch, with boundary, cleanup, streaming, and mutation coverage.
+- Replaced blocking session refresh in the async 401 path with a non-blocking
+  bounded login request that replays once only after a safe session key and
+  otherwise returns the original unauthorized response.
+- Centralized sync and async login response validation so missing or unsafe
+  server-provided session keys are rejected before refresh state changes.
+
 ## 2026-06-10
 
+- Bumped the package to 0.2.0 for the Python 3.10+, Tornado 6, and lxml 6
+  compatibility baseline.
+- Preserved callback delivery for asynchronous transport failures while moving
+  to Tornado's future-returning HTTP client API.
 - Replaced removed Tornado callback helpers with future-based async request
   completion while preserving the public response callback behavior.
 - Added pinned PEP 517 wheel and source-distribution builds with Python >=3.10
   package metadata.
 - Expanded GitHub Actions to fixed Ubuntu 24.04 runners across Python 3.10,
-  3.12, and 3.14 with concurrency cancellation.
+  3.12, and 3.14 on every push and pull request, with concurrency cancellation.
+- Made the hosted matrix rerun `make check` from a temporary working directory
+  to continuously enforce path-independent Make targets.
 - Made all Makefile checks independent of the caller's working directory.
 - Included the Markdown long description and requirement inputs in source
   distributions so wheel builds from the sdist do not fail.
 - Added a least-privilege GitHub Actions workflow using pinned Node 24 actions
-  to run the Python 3.12 `make check` baseline.
+  and credential-free checkout to run the complete `make check` baseline.
 - Pinned verified Tornado 6.5.6, lxml 6.1.1, setuptools 82.0.1, and pip-audit
   2.10.0 baselines, with bounded runtime package metadata and vulnerability
   auditing.

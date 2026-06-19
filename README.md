@@ -57,15 +57,41 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   build, and dependency auditing.
 - GitHub Actions installs pinned runtime and development requirements and runs
   `make check` on fixed Ubuntu 24.04 runners across Python 3.10, 3.12, and
-  3.14, with pinned Node 24 actions, read-only permissions, and timeouts.
+  3.14 for every push and pull request, with pinned Node 24 actions, read-only
+  permissions, credential-free checkout, and timeouts.
+- Each hosted matrix job also reruns `make check` from a temporary directory to
+  enforce path-independent Makefile behavior.
 - `make check` audits the pinned Tornado 6 and lxml 6 baseline for known
   vulnerabilities after the offline unit and packaging checks.
 - The tests mock response objects and Tornado HTTP clients; they do not require
   a live Splunk instance.
 - Auth retry tests verify that unauthorized requests retry at most once after a
   session-key refresh.
+- Async 401 handling refreshes the session key through the bounded non-blocking
+  login request, then replays the original request once only after receiving a
+  safe non-empty key. Failed refreshes return the original unauthorized
+  response.
+- Sync and async login responses share one validator that rejects missing or
+  CR/LF-bearing session keys before storing or replaying them.
+- Session-key whitespace validation also rejects blank or surrounding-whitespace
+  login values without silently modifying the server-provided credential.
+- Session-key header whitespace validation applies the same non-normalizing
+  boundary to caller-provided Authorization credentials; only `None` omits it.
+- Session-key control-character validation rejects ASCII controls from direct
+  and login-provided credentials before they can enter Authorization headers.
 - Async requests use Tornado 6's future-returning HTTP client API while keeping
-  the mixin's existing response callback contract.
+  the mixin's existing response callback contract, including transport errors.
+- Sync, async, retried, and streamed Splunk responses are capped at 1 MiB by
+  Tornado's `SimpleAsyncHTTPClient` before parsing; custom response objects
+  receive the same defensive parser check. The bounded mixin does not use a
+  globally configured curl client because Tornado's curl implementation has no
+  equivalent `max_body_size` constructor policy.
+- Synchronous requests and login use a 20-second default transport timeout;
+  caller-provided positive finite timeouts are preserved across the single
+  unauthorized retry, while disabled or malformed timeout values fail locally.
+- Version 0.2.0 is the first package baseline requiring Python 3.10+, Tornado
+  6.5.7+, and lxml 6.1.1+. Tornado 6.5.7 is the minimum patched release for
+  `GHSA-pw6j-qg29-8w7f`.
 - Request encoding tests verify that repeated query and POST parameters remain
   repeated fields instead of collapsing into a Python list string.
 - Header tests verify that session keys containing carriage returns or newlines
@@ -82,6 +108,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   media types, including `application/xml`.
 - Parser error handling catches expected XML and JSON decode failures without
   swallowing unrelated exceptions.
+- Supported XML, JSON, and text responses with missing bodies use the parser's
+  normalized empty body path instead of raising or returning `None`.
 - `make check` also requires completed canonical plans under `docs/plans`.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
@@ -123,6 +151,18 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-10-ci-baseline.md` for the GitHub Actions baseline.
 - See `docs/plans/2026-06-10-tornado-future-async.md` for the Tornado 6 async
   request compatibility fix.
+- See `docs/plans/2026-06-12-response-body-size-limit.md` for the 1 MiB
+  transport and parser response boundary.
+- See `docs/plans/2026-06-12-nonblocking-async-session-refresh.md` for the
+  non-blocking async 401 refresh and replay contract.
+- See `docs/plans/2026-06-13-session-key-whitespace-validation.md` for the
+  shared login credential whitespace boundary.
+- See `docs/plans/2026-06-14-make-root-override-protection.md` for authoritative
+  repository-root selection across all Make aliases.
+- See `docs/plans/2026-06-14-session-key-header-whitespace.md` for the shared
+  caller and login Authorization credential boundary.
+- See `docs/plans/2026-06-19-missing-response-body-parsing.md` for supported
+  response parser behavior when Tornado or synthetic responses expose no body.
 
 ## Contributing
 
