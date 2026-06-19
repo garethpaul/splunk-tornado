@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-19
+
+- Made supported XML, JSON, and text responses with missing bodies use the
+  parser's normalized empty body instead of raising or returning `None`.
+
 ## 2026-06-16
 
 - Raised the pinned and declared Tornado floor to 6.5.7, the first release that

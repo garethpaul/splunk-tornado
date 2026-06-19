@@ -271,19 +271,19 @@ class SplunkMixin(object):
         content = self.response_content_type(response)
         if content in ("text/xml", "application/xml"):
             try:
-                xml = et.fromstring(response.body, parser=self.xml_parser())
+                xml = et.fromstring(body, parser=self.xml_parser())
             except (et.XMLSyntaxError, ValueError):
                 logging.warning("Could not parse xml")
                 return None, None, None
             return xml, None, None
         elif content == "application/json":
             try:
-                json = escape.json_decode(response.body)
+                json = escape.json_decode(body)
             except ValueError:
                 logging.warning("Could not decode json")
                 return None, None, None
             return None, json, None
         elif content == "text/plain":
-            return None, None, response.body
+            return None, None, body
         else:
             return None, None, None

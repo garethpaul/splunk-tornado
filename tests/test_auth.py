@@ -197,6 +197,16 @@ class SplunkMixinTests(unittest.TestCase):
                     handler.parse_response(Response(content_type, body)),
                 )
 
+    def test_parse_response_treats_missing_supported_bodies_as_empty(self):
+        handler = SplunkMixin()
+
+        for content_type in ("text/xml", "application/json", "text/plain"):
+            with self.subTest(content_type=content_type):
+                self.assertEqual(
+                    (None, None, b"" if content_type == "text/plain" else None),
+                    handler.parse_response(Response(content_type, None)),
+                )
+
     def test_parse_response_normalizes_json_content_type(self):
         response = Response("Application/JSON; charset=utf-8", b'{"ok": true}')
 

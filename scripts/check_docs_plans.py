@@ -240,6 +240,10 @@ if "XMLParser(resolve_entities=False, no_network=True)" not in auth_source:
     failures.append("splunktornado/auth.py must create XMLParser with entity resolution disabled and no network access")
 if "et.fromstring(response.body)" in auth_source:
     failures.append("splunktornado/auth.py must not parse XML responses without the safe parser")
+if "escape.json_decode(response.body)" in auth_source:
+    failures.append("splunktornado/auth.py must not decode JSON from an unnormalized optional response body")
+if "return None, None, response.body" in auth_source:
+    failures.append("splunktornado/auth.py must not return an unnormalized optional text response body")
 if "except:" in auth_source:
     failures.append("splunktornado/auth.py must not use bare parser exceptions")
 if "except (et.XMLSyntaxError, ValueError):" not in auth_source:
@@ -369,6 +373,7 @@ test_source = read(os.path.join(ROOT, "tests", "test_auth.py"))
 for test_name in (
     "test_parse_response_accepts_body_at_limit",
     "test_parse_response_rejects_oversized_supported_content_types",
+    "test_parse_response_treats_missing_supported_bodies_as_empty",
     "test_async_request_preserves_streaming_callback_with_body_limit",
     "test_async_request_reports_transport_failures_to_callback",
     "test_async_request_closes_client_when_fetch_raises_synchronously",

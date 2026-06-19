@@ -108,6 +108,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   media types, including `application/xml`.
 - Parser error handling catches expected XML and JSON decode failures without
   swallowing unrelated exceptions.
+- Supported XML, JSON, and text responses with missing bodies use the parser's
+  normalized empty body path instead of raising or returning `None`.
 - `make check` also requires completed canonical plans under `docs/plans`.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
@@ -159,6 +161,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   repository-root selection across all Make aliases.
 - See `docs/plans/2026-06-14-session-key-header-whitespace.md` for the shared
   caller and login Authorization credential boundary.
+- See `docs/plans/2026-06-19-missing-response-body-parsing.md` for supported
+  response parser behavior when Tornado or synthetic responses expose no body.
 
 ## Contributing
 
