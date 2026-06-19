@@ -13,9 +13,13 @@ Make targets also failed when invoked outside the repository.
 - Added a pinned setuptools PEP 517 backend and `build` frontend.
 - Replaced `setup.py check` with real wheel and source-distribution builds.
 - Declared Python 3.10 or newer in package metadata.
+- Bumped the package to 0.2.0 to identify the breaking runtime and dependency
+  floor separately from the historical 0.1 package.
 - Expanded CI to Python 3.10, 3.12, and 3.14 on fixed Ubuntu 24.04 runners.
 - Added concurrency cancellation and exact action-version comments.
 - Anchored Makefile paths to the repository root.
+- Added an external-working-directory `make check` invocation to every hosted
+  matrix job so path independence remains continuously enforced.
 - Added the long-description and requirement files to the source distribution
   after a clean wheel-from-sdist build exposed the missing README metadata.
 

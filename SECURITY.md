@@ -33,9 +33,32 @@ Helpful reports include:
 - GitHub Actions installs checked-in requirements and runs the Python
   `make check` baseline across Python 3.10, 3.12, and 3.14 before review.
 - The baseline pins and audits Tornado and lxml; CI actions are pinned by
-  commit and run with read-only repository contents permission.
+  commit and run with read-only repository contents permission and
+  credential-free checkout on every push and pull request.
+- Tornado 6.5.7 is the minimum supported release because it patches
+  `GHSA-pw6j-qg29-8w7f`, which can leak per-request credentials when curl
+  handles are reused.
 - Async Splunk requests use Tornado 6's supported future completion path so
   authentication retries and response callbacks execute under the pinned API.
+- Splunk response bodies are limited to 1 MiB at the Tornado transport layer,
+  including streamed responses, and checked again before in-memory parser
+  dispatch to reduce denial-of-service risk from oversized upstream data. The
+  mixin selects `SimpleAsyncHTTPClient`, whose constructor enforces that cap.
+- Async unauthorized responses use a non-blocking login request, validate the
+  returned session key, and replay at most once. Login failure returns the
+  original 401 instead of blocking the event loop or widening retry behavior.
+- Session-key whitespace validation rejects blank or trim-unstable login values
+  before shared authentication state changes.
+- Session-key header whitespace validation rejects explicit blank or
+  trim-unstable caller credentials while preserving `None` as unauthenticated.
+- Session-key control-character validation rejects ASCII controls from direct
+  and login-provided credentials before Authorization header construction.
+- Synchronous and asynchronous login keys pass through the same Authorization
+  header validation before refresh updates shared authentication state.
+- Synchronous Splunk requests and login refreshes use a bounded 20-second
+  default timeout, and positive finite custom timeouts survive the one
+  authorized replay. Disabled, non-finite, boolean, and malformed timeout
+  values are rejected before a transport client is constructed.
 
 ## Service and API Notes
 
