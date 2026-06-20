@@ -68,6 +68,10 @@ For web services, APIs, sockets, or scraping workflows, prioritize reports invol
 
 Dependency updates should come from trusted package managers and should keep lockfiles in sync when lockfiles exist. Do not commit credentials, private keys, tokens, generated secrets, or machine-local configuration. If a vulnerability depends on a compromised package, typosquatting risk, insecure transitive dependency, or unsafe build step, include the package name, affected version, and the path through which it is used.
 
+The development dependency graph pins `msgpack 1.2.1` across `pip-audit`'s
+CacheControl dependency so `GHSA-6v7p-g79w-8964` cannot remain in the
+verification environment through a permissive transitive range.
+
 ## Safe Research Guidelines
 
 Good-faith research is welcome when it stays within these boundaries:
