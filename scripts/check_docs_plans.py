@@ -22,6 +22,7 @@ ROOT_OVERRIDE_PLAN = os.path.join(DOCS_PLANS, "2026-06-14-make-root-override-pro
 HEADER_WHITESPACE_PLAN = os.path.join(DOCS_PLANS, "2026-06-14-session-key-header-whitespace.md")
 SESSION_KEY_CONTROL_PLAN = os.path.join(DOCS_PLANS, "2026-06-14-session-key-control-characters.md")
 TORNADO_ADVISORY_PLAN = os.path.join(DOCS_PLANS, "2026-06-16-tornado-6-5-7-advisory-remediation.md")
+MSGPACK_ADVISORY_PLAN = os.path.join(DOCS_PLANS, "2026-06-20-msgpack-1-2-1-advisory-remediation.md")
 CI_WORKFLOW = os.path.join(ROOT, ".github", "workflows", "check.yml")
 WORKFLOW_DIR = os.path.dirname(CI_WORKFLOW)
 
@@ -109,6 +110,8 @@ if not os.path.isfile(SESSION_KEY_CONTROL_PLAN):
     failures.append("%s is missing" % rel(SESSION_KEY_CONTROL_PLAN))
 if not os.path.isfile(TORNADO_ADVISORY_PLAN):
     failures.append("%s is missing" % rel(TORNADO_ADVISORY_PLAN))
+if not os.path.isfile(MSGPACK_ADVISORY_PLAN):
+    failures.append("%s is missing" % rel(MSGPACK_ADVISORY_PLAN))
 if not os.path.isfile(CI_WORKFLOW):
     failures.append("%s is missing" % rel(CI_WORKFLOW))
 
@@ -156,7 +159,7 @@ setup_source = read(os.path.join(ROOT, "setup.py"))
 for requirement in ("lxml==6.1.1", "tornado==6.5.7"):
     if requirement not in requirements:
         failures.append("requirements.txt must pin %s" % requirement)
-for requirement in ("build==1.5.0", "pip-audit==2.10.0", "setuptools==82.0.1"):
+for requirement in ("build==1.5.0", "msgpack==1.2.1", "pip-audit==2.10.0", "setuptools==82.0.1"):
     if requirement not in requirements_dev:
         failures.append("requirements-dev.txt must pin %s" % requirement)
 for requirement in ("lxml>=6.1.1,<7", "tornado>=6.5.7,<7"):
@@ -198,6 +201,8 @@ if "docs/plans/2026-06-14-make-root-override-protection.md" not in read(os.path.
     failures.append("README.md must index Make root override protection evidence")
 if "docs/plans/2026-06-14-session-key-header-whitespace.md" not in read(os.path.join(ROOT, "README.md")):
     failures.append("README.md must index session-key header whitespace evidence")
+if "docs/plans/2026-06-20-msgpack-1-2-1-advisory-remediation.md" not in read(os.path.join(ROOT, "README.md")):
+    failures.append("README.md must index msgpack advisory remediation evidence")
 
 manifest = read(os.path.join(ROOT, "MANIFEST.in"))
 if "include README README.md requirements.txt requirements-dev.txt" not in manifest:
@@ -224,6 +229,24 @@ for evidence in (
 ):
     if evidence not in advisory_plan:
         failures.append("%s must record verification evidence %r" % (rel(TORNADO_ADVISORY_PLAN), evidence))
+
+for docs_file in ("README.md", "SECURITY.md", "CHANGES.md"):
+    docs_path = os.path.join(ROOT, docs_file)
+    docs_source = read(docs_path) if os.path.isfile(docs_path) else ""
+    if "msgpack 1.2.1" not in docs_source or "GHSA-6v7p-g79w-8964" not in docs_source:
+        failures.append("%s must document the patched msgpack advisory pin" % docs_file)
+
+msgpack_advisory_plan = read(MSGPACK_ADVISORY_PLAN) if os.path.isfile(MSGPACK_ADVISORY_PLAN) else ""
+for evidence in (
+    "Status: Completed",
+    "msgpack 1.1.2",
+    "msgpack 1.2.1",
+    "GHSA-6v7p-g79w-8964",
+    "repository and external-directory `make check` passed",
+    "pip-audit reported no known vulnerabilities",
+):
+    if evidence not in msgpack_advisory_plan:
+        failures.append("%s must record verification evidence %r" % (rel(MSGPACK_ADVISORY_PLAN), evidence))
 
 auth_source = read(os.path.join(ROOT, "splunktornado", "auth.py"))
 if "self.async_callback(" in auth_source:

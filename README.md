@@ -43,7 +43,12 @@ Additional scan context:
 git clone https://github.com/garethpaul/splunk-tornado.git
 cd splunk-tornado
 python3 -m pip install -r requirements.txt
+python3 -m pip install -r requirements-dev.txt
 ```
+
+The development requirements pin `msgpack 1.2.1` across `pip-audit`'s
+CacheControl dependency so the verification environment does not resolve the
+vulnerable 1.1.2 release covered by `GHSA-6v7p-g79w-8964`.
 
 The setup commands above are derived from repository files. Legacy mobile, Python, or JavaScript samples may require older SDKs or package versions than a modern workstation uses by default.
 
@@ -61,8 +66,9 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   permissions, credential-free checkout, and timeouts.
 - Each hosted matrix job also reruns `make check` from a temporary directory to
   enforce path-independent Makefile behavior.
-- `make check` audits the pinned Tornado 6 and lxml 6 baseline for known
-  vulnerabilities after the offline unit and packaging checks.
+- `make check` audits the pinned Tornado 6 and lxml 6 runtime baseline plus the
+  patched `msgpack 1.2.1` verification dependency for known vulnerabilities
+  after the offline unit and packaging checks.
 - The tests mock response objects and Tornado HTTP clients; they do not require
   a live Splunk instance.
 - Auth retry tests verify that unauthorized requests retry at most once after a
@@ -163,6 +169,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   caller and login Authorization credential boundary.
 - See `docs/plans/2026-06-19-missing-response-body-parsing.md` for supported
   response parser behavior when Tornado or synthetic responses expose no body.
+- See `docs/plans/2026-06-20-msgpack-1-2-1-advisory-remediation.md` for the
+  patched verification-tool dependency boundary.
 
 ## Contributing
 

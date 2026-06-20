@@ -1,5 +1,12 @@
 # Changes
 
+## 2026-06-20
+
+- Pinned transitive `msgpack 1.2.1` in the verification toolchain to remediate
+  `GHSA-6v7p-g79w-8964` from `pip-audit`'s CacheControl dependency graph.
+- Extended the canonical documentation checker so pin removal, downgrade, or
+  missing advisory evidence fails the shared gate.
+
 ## 2026-06-19
 
 - Made supported XML, JSON, and text responses with missing bodies use the
