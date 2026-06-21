@@ -1,5 +1,13 @@
 # Changes
 
+## 2026-06-21
+
+- Isolated repository verification from caller-controlled roots, shells,
+  non-executing Make modes, preload metadata, and additional Makefiles while
+  preserving the trusted Python-version override.
+- Added bounded Make authority coverage and pinned hosted dispatch to the
+  absolute GNU Make launcher.
+
 ## 2026-06-20
 
 - Pinned transitive `msgpack 1.2.1` in the verification toolchain to remediate
