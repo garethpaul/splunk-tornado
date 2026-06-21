@@ -19,6 +19,7 @@ ASYNC_REFRESH_PLAN = os.path.join(DOCS_PLANS, "2026-06-12-nonblocking-async-sess
 TIMEOUT_VALIDATION_PLAN = os.path.join(DOCS_PLANS, "2026-06-13-positive-request-timeout-validation.md")
 SESSION_KEY_WHITESPACE_PLAN = os.path.join(DOCS_PLANS, "2026-06-13-session-key-whitespace-validation.md")
 ROOT_OVERRIDE_PLAN = os.path.join(DOCS_PLANS, "2026-06-14-make-root-override-protection.md")
+MAKE_AUTHORITY_PLAN = os.path.join(DOCS_PLANS, "2026-06-21-make-authority-isolation.md")
 HEADER_WHITESPACE_PLAN = os.path.join(DOCS_PLANS, "2026-06-14-session-key-header-whitespace.md")
 SESSION_KEY_CONTROL_PLAN = os.path.join(DOCS_PLANS, "2026-06-14-session-key-control-characters.md")
 TORNADO_ADVISORY_PLAN = os.path.join(DOCS_PLANS, "2026-06-16-tornado-6-5-7-advisory-remediation.md")
@@ -64,10 +65,10 @@ jobs:
         run: python -m pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Run baseline
-        run: make check
+        run: /usr/bin/make check
 
       - name: Verify external working directory
-        run: cd "$(mktemp -d)" && make -f "$GITHUB_WORKSPACE/Makefile" check
+        run: cd "$(mktemp -d)" && /usr/bin/make -f "$GITHUB_WORKSPACE/Makefile" check
 """
 
 
@@ -104,6 +105,8 @@ if not os.path.isfile(SESSION_KEY_WHITESPACE_PLAN):
     failures.append("%s is missing" % rel(SESSION_KEY_WHITESPACE_PLAN))
 if not os.path.isfile(ROOT_OVERRIDE_PLAN):
     failures.append("%s is missing" % rel(ROOT_OVERRIDE_PLAN))
+if not os.path.isfile(MAKE_AUTHORITY_PLAN):
+    failures.append("%s is missing" % rel(MAKE_AUTHORITY_PLAN))
 if not os.path.isfile(HEADER_WHITESPACE_PLAN):
     failures.append("%s is missing" % rel(HEADER_WHITESPACE_PLAN))
 if not os.path.isfile(SESSION_KEY_CONTROL_PLAN):
@@ -142,8 +145,8 @@ if os.path.isfile(CI_WORKFLOW):
         "timeout-minutes: 10",
         "workflow_dispatch:",
         "python -m pip install -r requirements.txt -r requirements-dev.txt",
-        "run: make check",
-        'run: cd "$(mktemp -d)" && make -f "$GITHUB_WORKSPACE/Makefile" check',
+        "run: /usr/bin/make check",
+        'run: cd "$(mktemp -d)" && /usr/bin/make -f "$GITHUB_WORKSPACE/Makefile" check',
     )
     for phrase in required_workflow_phrases:
         if phrase not in workflow:
@@ -180,25 +183,52 @@ for phrase in ('requires = ["setuptools==82.0.1"]', 'build-backend = "setuptools
         failures.append("pyproject.toml must contain %s" % phrase)
 
 makefile = read(os.path.join(ROOT, "Makefile"))
-root_declaration = "override ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))"
-if makefile.count(root_declaration) != 1:
-    failures.append("Makefile must contain exactly one protected repository-root declaration")
-if makefile.count("PYTHON ?= python3\n" + root_declaration) != 1:
-    failures.append("Makefile must keep the Python override before the protected repository root")
 for phrase in (
-    ".PHONY: audit build check lint test verify",
+    ".PHONY: __repository-make-authority audit build check lint root-test test verify",
+    ".SECONDEXPANSION:",
+    "PYTHON ?= python3",
+    "override PYTHON := $(value PYTHON)",
+    "override SHELL := /bin/sh",
+    "override .SHELLFLAGS := -c",
+    "MAKEFLAGS must not be overridden for repository verification",
+    "non-executing or error-ignoring MAKEFLAGS are not supported for repository verification",
+    "MAKEFILES must be empty; repository verification requires this Makefile to be loaded alone",
+    "MAKEFILE_LIST must not be overridden",
+    "override ROOT := $(shell path=",
+    "repository Makefile path could not be resolved",
+    "repository Makefile must be loaded alone",
+    "audit build check lint root-test test verify: __repository-make-authority",
     "build: lint",
-    "verify: lint test build",
+    "root-test:",
+    "verify: root-test lint test build",
     "check: verify audit",
-    '$(PYTHON) -m build --no-isolation --outdir "$(ROOT)/dist" "$(ROOT)"',
-    '"$(ROOT)/requirements.txt"',
-    '"$(ROOT)/requirements-dev.txt"',
+    '"$$PYTHON" -m build --no-isolation --outdir "$$ROOT/dist" "$$ROOT"',
+    '"$$ROOT/requirements.txt"',
+    '"$$ROOT/requirements-dev.txt"',
 ):
     if phrase not in makefile:
         failures.append("Makefile must contain %s" % phrase)
+for declaration in ("export PYTHON\n", "export ROOT\n"):
+    if makefile.count(declaration) != 1:
+        failures.append("Makefile must contain exactly one %s declaration" % declaration.strip())
+
+root_test = read(os.path.join(ROOT, "scripts", "test-makefile-root.sh"))
+for phrase in (
+    "PATH=/usr/bin:/bin",
+    "35 executed target/authority cases",
+    "1 dollar-syntax checkout case",
+    "1 Python-value Make-syntax rejection",
+    "2 MAKEFILE_LIST rejections",
+    "3 contained startup-boundary cases",
+    "10 mode-flag rejections",
+):
+    if phrase not in root_test:
+        failures.append("scripts/test-makefile-root.sh must contain %s" % phrase)
 
 if "docs/plans/2026-06-14-make-root-override-protection.md" not in read(os.path.join(ROOT, "README.md")):
     failures.append("README.md must index Make root override protection evidence")
+if "docs/plans/2026-06-21-make-authority-isolation.md" not in read(os.path.join(ROOT, "README.md")):
+    failures.append("README.md must index Make authority isolation evidence")
 if "docs/plans/2026-06-14-session-key-header-whitespace.md" not in read(os.path.join(ROOT, "README.md")):
     failures.append("README.md must index session-key header whitespace evidence")
 if "docs/plans/2026-06-20-msgpack-1-2-1-advisory-remediation.md" not in read(os.path.join(ROOT, "README.md")):
@@ -470,6 +500,19 @@ if os.path.isfile(SESSION_KEY_CONTROL_PLAN):
     ):
         if evidence not in control_plan:
             failures.append("%s must record verification evidence %r" % (rel(SESSION_KEY_CONTROL_PLAN), evidence))
+
+if os.path.isfile(MAKE_AUTHORITY_PLAN):
+    authority_plan = read(MAKE_AUTHORITY_PLAN)
+    for evidence in (
+        "Status: Completed",
+        "35 target/authority cases",
+        "ten mode-flag rejections",
+        "visible additional files are rejected before recipes",
+        "repository and external-directory `make check` passed",
+        "caller-selected Python interpreter remains an explicit trust boundary",
+    ):
+        if evidence not in authority_plan:
+            failures.append("%s must record verification evidence %r" % (rel(MAKE_AUTHORITY_PLAN), evidence))
 
 if failures:
     print("Documentation plan checks failed:\n- %s" % "\n- ".join(failures), file=sys.stderr)

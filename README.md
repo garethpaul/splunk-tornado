@@ -60,6 +60,10 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 
 - `make check` runs Python syntax checks, unit tests, a PEP 517 wheel/sdist
   build, and dependency auditing.
+- `make root-test` exercises repository-root, shell, Make metadata, and
+  non-executing-mode authority without network access.
+- The `PYTHON` override remains an intentional trusted-input boundary for the
+  supported Python 3.10, 3.12, and 3.14 verification matrix.
 - GitHub Actions installs pinned runtime and development requirements and runs
   `make check` on fixed Ubuntu 24.04 runners across Python 3.10, 3.12, and
   3.14 for every push and pull request, with pinned Node 24 actions, read-only
@@ -165,6 +169,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   shared login credential whitespace boundary.
 - See `docs/plans/2026-06-14-make-root-override-protection.md` for authoritative
   repository-root selection across all Make aliases.
+- See `docs/plans/2026-06-21-make-authority-isolation.md` for quoted checkout
+  paths, fixed shell authority, Make mode rejection, and startup boundaries.
 - See `docs/plans/2026-06-14-session-key-header-whitespace.md` for the shared
   caller and login Authorization credential boundary.
 - See `docs/plans/2026-06-19-missing-response-body-parsing.md` for supported
