@@ -22,6 +22,9 @@ buffered requests.
 - Root and external-directory `make check` passed for all three versions;
   Python 3.10 used the clean official container for its nested audit environment.
 - Two hostile source/test contract mutations were rejected.
+- Hosted Check runs `28254051784` and `28254055539` passed the full Python
+  3.10/3.12/3.14 matrix, and CodeQL run `28254054317` passed on implementation
+  commit `593253b2f3b1a70e94bb5d34beeec594718f95a4`.
 
 ### Findings
 
@@ -34,6 +37,8 @@ buffered requests.
 - The uv-managed Python 3.10 interpreter lacks `ensurepip`, so local
   `pip-audit` nested-environment creation failed; the official 3.10.20
   container completed the exact gate instead.
+- Codex review was attempted once and skipped after HTTP 401 failures on both
+  WebSocket and HTTPS transports.
 
 ### Next action
 

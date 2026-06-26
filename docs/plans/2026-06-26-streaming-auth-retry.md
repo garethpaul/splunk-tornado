@@ -41,6 +41,11 @@ https://www.tornadoweb.org/en/stable/httpclient.html
   uv-managed interpreter lacks `ensurepip` for pip-audit's nested environment.
 - Two hostile mutations restoring unconditional streamed retry or removing the
   focused regression were rejected by the documentation/source contract gate.
+- Hosted Check runs `28254051784` and `28254055539` passed Python 3.10, 3.12,
+  and 3.14, and CodeQL run `28254054317` passed Actions and Python analysis on
+  implementation commit `593253b2f3b1a70e94bb5d34beeec594718f95a4`.
+- `codex review --base master` was attempted once and failed authentication with
+  HTTP 401 on both WebSocket and HTTPS transports.
 - No live Splunk Enterprise or Splunk Cloud service was exercised.
 
 ## Non-Goals
