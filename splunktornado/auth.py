@@ -224,17 +224,19 @@ class SplunkMixin(object):
         else:
             if response.error:
                 if response.code == 401 and self.retry_request and retry_on_unauthorized:
-                    self._request_session_key_async(partial(
-                        self._on_async_session_refresh,
-                        pathname,
-                        callback,
-                        response,
-                        post_args=post_args,
-                        streaming_callback=streaming_callback,
-                        request_timeout=request_timeout,
-                        **kwargs
-                    ))
-                    return
+                    if streaming_callback is None:
+                        self._request_session_key_async(partial(
+                            self._on_async_session_refresh,
+                            pathname,
+                            callback,
+                            response,
+                            post_args=post_args,
+                            streaming_callback=streaming_callback,
+                            request_timeout=request_timeout,
+                            **kwargs
+                        ))
+                        return
+                    logging.info("Not retrying streamed unauthorized response")
             xml, json, text = self.parse_response(response)
             callback(response, xml=xml, json=json, text=text)    
 

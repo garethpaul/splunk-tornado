@@ -20,6 +20,7 @@ Priority:
 - Reject unsafe session-key values before building Authorization headers
 - Reject non-text session-key values before header formatting
 - Keep unauthorized request retries bounded per request
+- Treat streamed unauthorized responses as terminal after byte delivery begins
 - Avoid retrying upstream requests when session refresh fails
 - Preserve repeated Splunk query and form parameters during request encoding
 - Parse XML responses without resolving external entities

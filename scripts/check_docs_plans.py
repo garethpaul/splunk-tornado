@@ -25,6 +25,7 @@ SESSION_KEY_CONTROL_PLAN = os.path.join(DOCS_PLANS, "2026-06-14-session-key-cont
 TORNADO_ADVISORY_PLAN = os.path.join(DOCS_PLANS, "2026-06-16-tornado-6-5-7-advisory-remediation.md")
 MSGPACK_ADVISORY_PLAN = os.path.join(DOCS_PLANS, "2026-06-20-msgpack-1-2-1-advisory-remediation.md")
 SUPPORTED_AUTH_VERSIONS_PLAN = os.path.join(DOCS_PLANS, "2026-06-26-supported-auth-versions.md")
+STREAMING_RETRY_PLAN = os.path.join(DOCS_PLANS, "2026-06-26-streaming-auth-retry.md")
 CI_WORKFLOW = os.path.join(ROOT, ".github", "workflows", "check.yml")
 WORKFLOW_DIR = os.path.dirname(CI_WORKFLOW)
 
@@ -118,6 +119,8 @@ if not os.path.isfile(MSGPACK_ADVISORY_PLAN):
     failures.append("%s is missing" % rel(MSGPACK_ADVISORY_PLAN))
 if not os.path.isfile(SUPPORTED_AUTH_VERSIONS_PLAN):
     failures.append("%s is missing" % rel(SUPPORTED_AUTH_VERSIONS_PLAN))
+if not os.path.isfile(STREAMING_RETRY_PLAN):
+    failures.append("%s is missing" % rel(STREAMING_RETRY_PLAN))
 if not os.path.isfile(CI_WORKFLOW):
     failures.append("%s is missing" % rel(CI_WORKFLOW))
 
@@ -395,6 +398,10 @@ async_login_source = auth_source.split("def _request_session_key_async", 1)[1].s
 if "retry_on_unauthorized=False" not in async_login_source:
     failures.append("splunktornado/auth.py must not retry the async login request")
 async_response_source = auth_source.split("def _on_async_response", 1)[1].split("def _on_async_session_refresh", 1)[0]
+if "if streaming_callback is None:" not in async_response_source:
+    failures.append("splunktornado/auth.py must not retry after streaming response chunks may be delivered")
+if 'logging.info("Not retrying streamed unauthorized response")' not in async_response_source:
+    failures.append("splunktornado/auth.py must record why a streamed unauthorized response is terminal")
 if "self.refresh_session_key()" in async_response_source:
     failures.append("splunktornado/auth.py must not block the event loop with synchronous session refresh")
 if "self._request_session_key_async(partial(" not in async_response_source:
@@ -442,6 +449,7 @@ for test_name in (
     "test_async_request_reports_transport_failures_to_callback",
     "test_async_request_closes_client_when_fetch_raises_synchronously",
     "test_async_request_retries_unauthorized_once",
+    "test_async_request_does_not_retry_streamed_unauthorized_response",
     "test_async_request_returns_original_unauthorized_when_refresh_fails",
     "test_async_session_key_request_uses_bounded_login_without_retry",
     "test_async_session_key_request_rejects_missing_or_unsafe_keys",

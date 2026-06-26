@@ -1,5 +1,50 @@
 # Changes
 
+## 2026-06-26 10:19 PDT - P1 - Do not replay streamed unauthorized responses
+
+### Summary
+
+Prevented async 401 refresh/retry when a streaming callback may already have
+received unauthorized response bytes, while preserving one bounded replay for
+buffered requests.
+
+### Files changed
+
+- `splunktornado/auth.py` — made streamed unauthorized responses terminal.
+- `tests/test_auth.py` — separated buffered retry and streamed terminal cases.
+- `scripts/check_docs_plans.py` — enforced source, test, and plan contracts.
+- `README.md`, `SECURITY.md`, `VISION.md` — documented the byte-stream boundary.
+- `docs/plans/2026-06-26-streaming-auth-retry.md` — recorded design and evidence.
+
+### Tests
+
+- 38 tests passed under Python 3.10.20, 3.12.3, and 3.14.6.
+- Root and external-directory `make check` passed for all three versions;
+  Python 3.10 used the clean official container for its nested audit environment.
+- Two hostile source/test contract mutations were rejected.
+- Hosted Check runs `28254051784` and `28254055539` passed the full Python
+  3.10/3.12/3.14 matrix, and CodeQL run `28254054317` passed on implementation
+  commit `593253b2f3b1a70e94bb5d34beeec594718f95a4`.
+
+### Findings
+
+- Tornado invokes `streaming_callback` for chunks before the final response is
+  available, so replay cannot safely retract or separate already-emitted bytes.
+- Buffered async 401 responses retain the existing non-blocking single retry.
+
+### Blockers
+
+- The uv-managed Python 3.10 interpreter lacks `ensurepip`, so local
+  `pip-audit` nested-environment creation failed; the official 3.10.20
+  container completed the exact gate instead.
+- Codex review was attempted once and skipped after HTTP 401 failures on both
+  WebSocket and HTTPS transports.
+
+### Next action
+
+- Require hosted Python 3.10/3.12/3.14 and CodeQL checks on the exact PR head,
+  then merge that SHA and confirm default-branch health.
+
 ## 2026-06-26
 
 - Documented the tested Python 3.10/3.12/3.14 and Tornado 6 client matrix
