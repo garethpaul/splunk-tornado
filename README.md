@@ -56,6 +56,22 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 
 - No single runtime entry point was identified. Start by reading the source files and manifests listed above.
 
+## Compatibility Boundary
+
+- The tested package matrix is Python 3.10, 3.12, and 3.14 with Tornado
+  6.5.7 through the supported 6.x line and lxml 6.1.1 through the supported 6.x
+  line. These client-library claims are enforced by metadata, tests, builds,
+  and GitHub Actions.
+- The implemented Splunk authentication surface is the legacy
+  `/services/auth/login` session-key exchange followed by the standard
+  `Authorization: Splunk <session-key>` REST header.
+- The test suite uses mocked Tornado clients and responses. No live Splunk
+  Enterprise or Splunk Cloud version matrix is claimed.
+- Splunk authentication tokens introduced in Splunk 7.3 use a JWT flow and are
+  outside this mixin's current API. See Splunk's official
+  [REST API authentication overview](https://help.splunk.com/en?resourceId=Splunk_RESTUM_RESTusing&version=splunk-9_1)
+  and [token usage guidance](https://help.splunk.com/en/splunk-enterprise/administer/manage-users-and-security/9.1/authenticate-into-the-splunk-platform-with-tokens/use-authentication-tokens).
+
 ## Testing and Verification
 
 - `make check` runs Python syntax checks, unit tests, a PEP 517 wheel/sdist
@@ -171,6 +187,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   repository-root selection across all Make aliases.
 - See `docs/plans/2026-06-21-make-authority-isolation.md` for quoted checkout
   paths, fixed shell authority, Make mode rejection, and startup boundaries.
+- See `docs/plans/2026-06-26-supported-auth-versions.md` for the tested client
+  matrix and source-backed Splunk authentication boundary.
 - See `docs/plans/2026-06-14-session-key-header-whitespace.md` for the shared
   caller and login Authorization credential boundary.
 - See `docs/plans/2026-06-19-missing-response-body-parsing.md` for supported

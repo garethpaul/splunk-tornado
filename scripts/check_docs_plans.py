@@ -24,6 +24,7 @@ HEADER_WHITESPACE_PLAN = os.path.join(DOCS_PLANS, "2026-06-14-session-key-header
 SESSION_KEY_CONTROL_PLAN = os.path.join(DOCS_PLANS, "2026-06-14-session-key-control-characters.md")
 TORNADO_ADVISORY_PLAN = os.path.join(DOCS_PLANS, "2026-06-16-tornado-6-5-7-advisory-remediation.md")
 MSGPACK_ADVISORY_PLAN = os.path.join(DOCS_PLANS, "2026-06-20-msgpack-1-2-1-advisory-remediation.md")
+SUPPORTED_AUTH_VERSIONS_PLAN = os.path.join(DOCS_PLANS, "2026-06-26-supported-auth-versions.md")
 CI_WORKFLOW = os.path.join(ROOT, ".github", "workflows", "check.yml")
 WORKFLOW_DIR = os.path.dirname(CI_WORKFLOW)
 
@@ -115,6 +116,8 @@ if not os.path.isfile(TORNADO_ADVISORY_PLAN):
     failures.append("%s is missing" % rel(TORNADO_ADVISORY_PLAN))
 if not os.path.isfile(MSGPACK_ADVISORY_PLAN):
     failures.append("%s is missing" % rel(MSGPACK_ADVISORY_PLAN))
+if not os.path.isfile(SUPPORTED_AUTH_VERSIONS_PLAN):
+    failures.append("%s is missing" % rel(SUPPORTED_AUTH_VERSIONS_PLAN))
 if not os.path.isfile(CI_WORKFLOW):
     failures.append("%s is missing" % rel(CI_WORKFLOW))
 
@@ -233,6 +236,14 @@ if "docs/plans/2026-06-14-session-key-header-whitespace.md" not in read(os.path.
     failures.append("README.md must index session-key header whitespace evidence")
 if "docs/plans/2026-06-20-msgpack-1-2-1-advisory-remediation.md" not in read(os.path.join(ROOT, "README.md")):
     failures.append("README.md must index msgpack advisory remediation evidence")
+if "docs/plans/2026-06-26-supported-auth-versions.md" not in read(os.path.join(ROOT, "README.md")):
+    failures.append("README.md must index supported authentication version evidence")
+
+for docs_file in ("README.md", "VISION.md", "CHANGES.md"):
+    docs_source = read(os.path.join(ROOT, docs_file))
+    for phrase in ("Python 3.10", "Tornado 6", "session-key", "JWT"):
+        if phrase not in docs_source:
+            failures.append("%s must document the compatibility boundary %s" % (docs_file, phrase))
 
 manifest = read(os.path.join(ROOT, "MANIFEST.in"))
 if "include README README.md requirements.txt requirements-dev.txt" not in manifest:

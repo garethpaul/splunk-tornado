@@ -48,6 +48,8 @@
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
 - See `docs/plans/2026-06-08-splunk-tornado-baseline.md` for the canonical auth and request compatibility baseline.
+- See `docs/plans/2026-06-26-supported-auth-versions.md` for the tested client
+  matrix and Splunk authentication protocol boundary.
 - See `docs/plans/2026-06-08-bounded-auth-retry.md` for the bounded unauthorized retry guard.
 - See `docs/plans/2026-06-08-sync-refresh-failure.md` for the sync retry refresh-failure guard.
 
