@@ -756,14 +756,12 @@ class SplunkMixinTests(unittest.TestCase):
             callback("fresh"),
         )
         callback_calls = []
-        streaming_callback = lambda chunk: None
 
         handler._on_async_response(
             "/services/search/jobs",
             lambda response, **kwargs: callback_calls.append((response, kwargs)),
             Response("text/plain", b"unauthorized", error=FakeHTTPError(401)),
             post_args={"search": "index=main"},
-            streaming_callback=streaming_callback,
             request_timeout=9.0,
             output_mode="json",
         )
@@ -775,11 +773,37 @@ class SplunkMixinTests(unittest.TestCase):
         self.assertEqual("/services/search/jobs", args[0])
         self.assertEqual("fresh", kwargs["session_key"])
         self.assertEqual({"search": "index=main"}, kwargs["post_args"])
-        self.assertIs(streaming_callback, kwargs["streaming_callback"])
+        self.assertIsNone(kwargs["streaming_callback"])
         self.assertEqual(9.0, kwargs["request_timeout"])
         self.assertEqual(False, kwargs["retry_on_unauthorized"])
         self.assertEqual("json", kwargs["output_mode"])
         self.assertEqual("fresh", handler.session_key)
+
+    def test_async_request_does_not_retry_streamed_unauthorized_response(self):
+        handler = DummyHandler()
+        handler.request = type("Request", (), {
+            "connection": type("Connection", (), {
+                "stream": type("Stream", (), {"closed": lambda self: False})()
+            })()
+        })()
+        original_response = Response("text/plain", b"", error=FakeHTTPError(401))
+        callback_calls = []
+        handler.async_request = lambda *args, **kwargs: self.fail("streamed request must not retry")
+        handler._request_session_key_async = lambda callback: self.fail(
+            "streamed request must not refresh after chunks may have been delivered"
+        )
+
+        handler._on_async_response(
+            "/services/search/jobs",
+            lambda response, **kwargs: callback_calls.append((response, kwargs)),
+            original_response,
+            streaming_callback=lambda chunk: None,
+        )
+
+        self.assertEqual(
+            [(original_response, {"xml": None, "json": None, "text": b""})],
+            callback_calls,
+        )
 
     def test_async_request_returns_original_unauthorized_when_refresh_fails(self):
         handler = DummyHandler()

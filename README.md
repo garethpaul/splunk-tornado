@@ -97,6 +97,9 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   login request, then replays the original request once only after receiving a
   safe non-empty key. Failed refreshes return the original unauthorized
   response.
+- Streamed 401 responses are terminal because Tornado delivers chunks before
+  the final response callback; replaying would mix unauthorized and successful
+  response bytes in the caller's stream.
 - Sync and async login responses share one validator that rejects missing or
   CR/LF-bearing session keys before storing or replaying them.
 - Session-key whitespace validation also rejects blank or surrounding-whitespace

@@ -47,6 +47,8 @@ Helpful reports include:
 - Async unauthorized responses use a non-blocking login request, validate the
   returned session key, and replay at most once. Login failure returns the
   original 401 instead of blocking the event loop or widening retry behavior.
+- Streamed unauthorized responses are not replayed after the streaming callback
+  may have received bytes, preventing mixed unauthorized and successful output.
 - Session-key whitespace validation rejects blank or trim-unstable login values
   before shared authentication state changes.
 - Session-key header whitespace validation rejects explicit blank or
