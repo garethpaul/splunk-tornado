@@ -1,5 +1,12 @@
 # Changes
 
+## 2026-06-26
+
+- Documented the tested Python 3.10/3.12/3.14 and Tornado 6 client matrix
+  separately from the legacy Splunk session-key REST protocol surface.
+- Clarified that mocked tests do not establish a live Splunk server version
+  matrix and that JWT authentication-token support is outside the current API.
+
 ## 2026-06-21
 
 - Isolated repository verification from caller-controlled roots, shells,

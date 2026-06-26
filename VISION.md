@@ -41,12 +41,14 @@ Priority:
 - Keep Tornado at 6.5.7 or newer so the maintained dependency floor excludes
   `GHSA-pw6j-qg29-8w7f`
 - Treat Python 2 and older Tornado APIs as legacy constraints
+- Keep the tested Python 3.10/3.12/3.14 and Tornado 6 client matrix distinct
+  from the legacy Splunk session-key protocol surface and from unimplemented
+  JWT token authentication
 
 Next priorities:
 
 - Expand mocked Tornado HTTP client and Splunk response coverage
 - Return clearer errors for auth failures and retry paths
-- Document supported Tornado and Splunk API versions
 
 Contribution rules:
 
